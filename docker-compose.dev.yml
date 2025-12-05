@@ -1,0 +1,43 @@
+services:
+  query:
+    build:
+      context: .
+      dockerfile: services/query_service/Dockerfile
+    command: python -m query_service.cli
+    volumes:
+      - ./services/query_service:/app/services/query_service
+      - ./shared:/app/shared
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+
+  ingest:
+    build:
+      context: .
+      dockerfile: services/ingestion_service/Dockerfile
+    command: python -m ingestion_service.cli
+    volumes:
+      - ./services/ingestion_service:/app/services/ingestion_service
+      - ./shared:/app/shared
+      - ingest-data:/data
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+
+  stt:
+    build:
+      context: .
+      dockerfile: services/stt_service/Dockerfile
+    command: python -m stt_service.cli
+    volumes:
+      - ./services/stt_service:/app/services/stt_service
+      - ./shared:/app/shared
+    ports:
+      - "50051:50051"
+    env_file:
+      - .env
+
+volumes:
+  ingest-data:

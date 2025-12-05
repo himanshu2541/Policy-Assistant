@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ingestion_service"
+version = "0.1.0"
+description = "Ingestion service - Data ingestion microservice"
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastapi>=0.123.5",
+    "python-multipart>=0.0.20",
+    "uvicorn[standard]>=0.38.0",
+]
+
+[project.scripts]
+ingestion-service = "ingestion_service.cli:run"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ingestion_service", "ingestion_service.*"]
+
+[tool.uv.sources]
+shared = { workspace = true }

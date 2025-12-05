@@ -1,0 +1,11 @@
+[tool.uv.workspace]
+members = ["services/*", "shared"]
+
+[dependency-groups]
+dev = [
+    "grpcio>=1.76.0",
+    "grpcio-tools>=1.76.0",
+    "httpx>=0.28.1",
+    "protobuf>=6.33.1",
+    "websockets>=15.0.1",
+]

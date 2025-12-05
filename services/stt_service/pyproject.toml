@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stt_service"
+version = "0.1.0"
+description = "STT service - Speech-to-Text microservice"
+requires-python = ">=3.10"
+
+dependencies = [
+    "grpcio>=1.76.0",
+    "grpcio-tools>=1.76.0",
+    "uvicorn[standard]>=0.38.0",
+]
+
+[project.scripts]
+stt-service = "stt_service.cli:run"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["stt_service", "stt_service.*"]
+
+[tool.uv.sources]
+shared = { workspace = true }

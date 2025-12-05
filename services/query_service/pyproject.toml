@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "query_service"
+version = "0.1.0"
+description = "Query service — HTTP + WebSocket front facing service"
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastapi>=0.123.5",
+    "uvicorn[standard]>=0.38.0",
+]
+
+[project.scripts]
+query-service = "query_service.cli:run"
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["query_service", "query_service.*"]
+
+[tool.uv.sources]
+shared = { workspace = true }
