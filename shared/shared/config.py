@@ -39,6 +39,10 @@ class Config(BaseSettings):
     PINECONE_API_KEY: str = ""
     PINECONE_INDEX_NAME: str = ""
 
+    STT_MODEL_SIZE: str = "small"
+    STT_DEVICE: str = "cpu"
+    STT_COMPUTE_TYPE: str = "int8"
+
     RELOAD: bool = True if ENV == "development" else False
     UPLOAD_DIR: str = "/data/uploads"
     CHUNK_SIZE: int = 500

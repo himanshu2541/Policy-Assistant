@@ -14,7 +14,6 @@ def run():
     Entry point to start the RAG Worker.
     """
     logger.info(f"Starting RAG Worker...")
-    logger.info(f"Environment: {os.getenv('ENV', 'development')}")
     logger.info(
         f"Embedding Provider: {config.EMBEDDING_PROVIDER}, Embedding Model: {config.EMBEDDING_MODEL_NAME}"
     )

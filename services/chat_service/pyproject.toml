@@ -7,6 +7,11 @@ name = "chat_service"
 version = "0.1.0"
 description = "Chat service - Chat Service microservice"
 requires-python = ">=3.10"
+dependencies = [
+    "faster-whisper>=1.2.1",
+    "grpcio>=1.76.0",
+    "protobuf>=6.33.1",
+]
 
 
 [project.scripts]

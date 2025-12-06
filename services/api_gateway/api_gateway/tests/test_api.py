@@ -29,7 +29,7 @@ def test_upload_endpoint():
 def test_sync_endpoint(mock_rag_stub):
     """Test /sync calls RAG Service gRPC"""
     # Setup Mock Response
-    mock_response = service_pb2.SyncResponse(status="Queued", job_id="12345")
+    mock_response = service_pb2.SyncResponse(status="Queued", job_id="12345") # type: ignore
     
     # FIX: Use AsyncMock so 'await stub.TriggerSync()' works
     mock_rag_stub.TriggerSync = AsyncMock(return_value=mock_response)
@@ -44,7 +44,7 @@ def test_sync_endpoint(mock_rag_stub):
 def test_chat_endpoint(mock_chat_stub):
     """Test /chat calls Chat Service gRPC"""
     # Setup Mock Response
-    mock_response = service_pb2.ChatResponse(text="Hello human")
+    mock_response = service_pb2.ChatResponse(text="Hello human") # type: ignore
     mock_response.context_chunks.add(text="Policy info...", doc_id="doc_1", score=0.9)
     
     # FIX: Use AsyncMock so 'await stub.Interact()' works

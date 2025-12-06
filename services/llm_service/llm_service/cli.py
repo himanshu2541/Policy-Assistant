@@ -1,15 +1,21 @@
 import sys
+import logging
+
+logger = logging.getLogger("LLM-Service-CLI")
+
 
 def run():
     from llm_service.app.main import serve
 
+    logger.info(f"Starting LLM Service...")
+
     try:
         serve()
     except KeyboardInterrupt:
-        print("LLM Service stopped manually.")
+        logger.info("LLM Service stopped manually.")
         sys.exit(0)
     except Exception as e:
-        print(f"LLM Service crashed: {e}")
+        logger.error(f"LLM Service crashed: {e}")
         sys.exit(1)
 
 
