@@ -1,1 +1,0 @@
-from .protos import stt_pb2, stt_pb2_grpc

@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag_worker"
+version = "0.1.0"
+description = "RAG worker - Retrieval-Augmented Generation worker microservice"
+requires-python = ">=3.10"
+dependencies = [
+    "langchain>=1.1.2",
+    "langchain-core>=1.1.1",
+    "langchain-text-splitters>=1.0.0",
+    "pypdf>=6.4.0",
+    "redis>=7.1.0",
+]
+
+[project.scripts]
+rag-worker = "rag_worker.cli:run"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rag_worker", "rag_worker.*"]
+
+[tool.uv.sources]
+shared = { workspace = true }

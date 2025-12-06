@@ -1,8 +1,0 @@
-
-go to folder /services/stt_service/stt_service/app
-
-run
-python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. protos/service.proto
-
-# from protos import stt_pb2 as protos_dot_stt__pb2
-from stt_service.app.protos import stt_pb2 as protos_dot_stt__pb2
