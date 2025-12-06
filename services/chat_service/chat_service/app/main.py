@@ -71,7 +71,7 @@ def serve():
     service_pb2_grpc.add_ChatServiceServicer_to_server(ChatService(config), server)
 
     port = config.CHAT_SERVICE_PORT
-    server.add_insecure_port(f"{config.CHAT_SERVICE_HOST}:{port}")
+    server.add_insecure_port(f"[::]:{port}")
     logger.info(f"Chat Service started on port {port}")
     server.start()
     server.wait_for_termination()

@@ -12,14 +12,17 @@ logger = logging.getLogger("LLM-Service")
 class LLMService(service_pb2_grpc.LLMServiceServicer):
     def __init__(self, config_instance=config):
         self.config = config_instance
+        logger.info("Initializing LLM Service components")
         self.chain_provider = ChainProvider(self.config)
+        logger.info("Chain provider initialized")
 
     def GenerateResponse(self, request, context):
         try:
-            logger.info(f"Generating for: {request.user_query[:20]}...")
+            logger.info(f"Generating response for: {request.user_query[:20]}...")
             
             # 1. Get the Chain
             chain = self.chain_provider.create_chain(request.system_prompt)
+            logger.info("Chain created for generation")
             
             # 2. Run the Chain
             # We map the gRPC request fields to the Prompt variables
@@ -27,6 +30,7 @@ class LLMService(service_pb2_grpc.LLMServiceServicer):
                 "context": request.context,
                 "input": request.user_query
             })
+            logger.info("Chain invoked successfully")
             
             return service_pb2.LLMResponse(text=result_text) # type: ignore
 
@@ -38,12 +42,14 @@ class LLMService(service_pb2_grpc.LLMServiceServicer):
 
     def StreamResponse(self, request, context):
         try:
-            logger.info(f"Streaming for: {request.user_query[:20]}...")
+            logger.info(f"Streaming response for: {request.user_query[:20]}...")
             
             # 1. Get the Chain
             chain = self.chain_provider.create_chain(request.system_prompt)
+            logger.info("Chain created for streaming")
             
             # 2. Stream the Chain
+            logger.info("Starting token streaming")
             for token in chain.stream({
                 "context": request.context,
                 "input": request.user_query
@@ -58,7 +64,7 @@ def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     service_pb2_grpc.add_LLMServiceServicer_to_server(LLMService(), server)
     port = config.LLM_SERVICE_PORT
-    server.add_insecure_port(f'{config.LLM_SERVICE_HOST}:{port}')
+    server.add_insecure_port(f'[::]:{port}')
     logger.info(f"LLM Service started on port {port}")
     server.start()
     server.wait_for_termination()

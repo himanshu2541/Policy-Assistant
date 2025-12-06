@@ -9,12 +9,12 @@ RUN apt-get update \
 WORKDIR /build
 
 COPY pyproject.toml ./pyproject.toml
-COPY services/embedding_worker ./services/embedding_worker
+COPY services/api_gateway ./services/api_gateway
 COPY shared ./shared
 
 RUN python -m pip install --upgrade pip setuptools wheel \
     && pip wheel ./shared -w /wheels \
-    && pip wheel ./services/embedding_worker -w /wheels \
+    && pip wheel ./services/api_gateway -w /wheels \
     && pip install --no-cache-dir /wheels/*
 
 FROM python:3.11-slim AS runtime
@@ -27,9 +27,9 @@ WORKDIR /app
 COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=build /usr/local/bin /usr/local/bin
 
-COPY services/embedding_worker /app/services/embedding_worker
+COPY services/api_gateway /app/services/api_gateway
 COPY shared /app/shared
 
 USER app
-EXPOSE 8003
-CMD ["embedding-worker"]
+EXPOSE 8000
+CMD ["api-gateway"]

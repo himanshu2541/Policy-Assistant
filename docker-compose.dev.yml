@@ -1,44 +1,118 @@
 services:
-  query:
+  # ==========================================
+  # 1. API GATEWAY (Hot Reload Enabled)
+  # ==========================================
+  api_gateway:
     build:
       context: .
-      dockerfile: services/query_service/Dockerfile
-    command: python -m query_service.cli
-    volumes:
-      - ./services/query_service:/app/services/query_service
-      - ./shared:/app/shared
+      dockerfile: services/api_gateway/Dockerfile
+    container_name: api_gateway_dev
     ports:
-      - "8001:8001"
-    env_file:
-      - .env
-    depends_on: ["stt"]
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - SHARED_FOLDER_PATH=/data
+      - RAG_SERVICE_HOST=rag_service
+      - CHAT_SERVICE_HOST=chat_service
+    # Map local code to container for hot-reloading
+    volumes:
+      - ./services/api_gateway:/app/services/api_gateway
+      - ./shared:/app/shared
+      - policy_uploads:/data
+    # Use uvicorn directly with --reload for development
+    command: python -m api_gateway.cli
+    depends_on:
+      - chat_service
+      - rag_service
 
-  ingest:
+  # ==========================================
+  # 2. CHAT SERVICE
+  # ==========================================
+  chat_service:
     build:
       context: .
-      dockerfile: services/ingestion_service/Dockerfile
-    command: python -m ingestion_service.cli
-    volumes:
-      - ./services/ingestion_service:/app/services/ingestion_service
-      - ./shared:/app/shared
-      - ingest-data:/data
-    ports:
-      - "8002:8002"
-    env_file:
-      - .env
-
-  stt:
-    build:
-      context: .
-      dockerfile: services/stt_service/Dockerfile
-    command: python -m stt_service.cli
-    volumes:
-      - ./services/stt_service:/app/services/stt_service
-      - ./shared:/app/shared
+      dockerfile: services/chat_service/Dockerfile
+    container_name: chat_service_dev
     ports:
       - "50051:50051"
-    env_file:
-      - .env
+    env_file: .env
+    environment:
+      - RAG_SERVICE_HOST=rag_service
+      - LLM_SERVICE_HOST=llm_service
+    volumes:
+      - ./services/chat_service:/app/services/chat_service
+      - ./shared:/app/shared
+    # Standard python execution (restart container to apply changes for gRPC)
+    command: python -m chat_service.cli
+    depends_on:
+      - rag_service
+      - llm_service
+
+  # ==========================================
+  # 3. RAG SERVICE
+  # ==========================================
+  rag_service:
+    build:
+      context: .
+      dockerfile: services/rag_service/Dockerfile
+    container_name: rag_service_dev
+    ports:
+      - "50052:50052"
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis_queue:6379/0
+    volumes:
+      - ./services/rag_service:/app/services/rag_service
+      - ./shared:/app/shared
+    command: python -m rag_service.cli
+    depends_on:
+      - redis_queue
+
+  # ==========================================
+  # 4. RAG WORKER
+  # ==========================================
+  rag_worker:
+    build:
+      context: .
+      dockerfile: services/rag_worker/Dockerfile
+    container_name: rag_worker_dev
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis_queue:6379/0
+      - SHARED_FOLDER_PATH=/data
+    volumes:
+      - ./services/rag_worker:/app/services/rag_worker
+      - ./shared:/app/shared
+      - policy_uploads:/data
+    command: python -m rag_worker.cli
+    depends_on:
+      - redis_queue
+
+  # ==========================================
+  # 5. LLM SERVICE
+  # ==========================================
+  llm_service:
+    build:
+      context: .
+      dockerfile: services/llm_service/Dockerfile
+    container_name: llm_service_dev
+    ports:
+      - "50053:50053"
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./services/llm_service:/app/services/llm_service
+      - ./shared:/app/shared
+    command: python -m llm_service.cli
+  # ==========================================
+  # INFRASTRUCTURE
+  # ==========================================
+  redis_queue:
+    image: redis:alpine
+    container_name: redis_queue_dev
+    ports:
+      - "6379:6379"
 
 volumes:
-  ingest-data:
+  policy_uploads:

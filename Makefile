@@ -1,12 +1,12 @@
-# Makefile - development helpers for microservices-endpoints
+# Makefile - development helpers for Policy Assistant Microservices
 # Usage:
 #   make dev-up            # bring up development compose (volumes + reload)
 #   make prod-up           # bring up production compose (images baked in)
-#   make restart SERVICE=query  # restart single service container
-#   make run SERVICE=query      # run service locally (python -m ...)
-#   make gen-protos         # generate grpc stubs (uses scripts/gen_protos.py)
-#   make install-dev        # pip install -e shared & services in the active venv
-#   make test               # run test_all_connections.py
+#   make restart SERVICE=chat  # restart single service container
+#   make run SERVICE=chat      # run service locally (python -m ...)
+#   make gen-protos        # generate grpc stubs (uses scripts/generate_protos.py)
+#   make install-dev       # pip install -e shared & services in the active venv
+#   make test              # run all pytest suites
 
 SHELL := /bin/bash
 
@@ -20,26 +20,27 @@ DOCKER_COMPOSE ?= docker compose
 .PHONY: help dev-up dev-down dev-build dev-logs \
         prod-up prod-down prod-build prod-logs \
         up down build logs \
-        restart build-service run docker-run \
-        gen-protos install-dev test python-run
+        restart build-service python-run docker-run \
+        gen-protos install-dev test
 
 help:
 	@echo "Makefile targets:"
-	@echo "  make dev-up         -> docker compose up for development (uses $(DEV_COMPOSE))"
-	@echo "  make dev-down       -> docker compose down for development"
-	@echo "  make dev-build      -> docker compose build for development"
-	@echo "  make dev-logs       -> follow logs for development"
-	@echo "  make prod-up        -> docker compose up for production (uses $(PROD_COMPOSE))"
-	@echo "  make prod-down      -> docker compose down for production"
-	@echo "  make prod-build     -> docker compose build for production"
-	@echo "  make prod-logs      -> follow logs for production"
-	@echo "  make restart SERVICE=<name>       -> restart single service container (by compose service name)"
+	@echo "  make dev-up        -> docker compose up for development (uses $(DEV_COMPOSE))"
+	@echo "  make dev-down      -> docker compose down for development"
+	@echo "  make dev-build     -> docker compose build for development"
+	@echo "  make dev-logs      -> follow logs for development"
+	@echo "  make prod-up       -> docker compose up for production (uses $(PROD_COMPOSE))"
+	@echo "  make prod-down     -> docker compose down for production"
+	@echo "  make prod-build    -> docker compose build for production"
+	@echo "  make prod-logs     -> follow logs for production"
+	@echo "  make restart SERVICE=<name>      -> restart single service container (by compose service name)"
 	@echo "  make build-service SERVICE=<name> -> build single service image"
-	@echo "  make run SERVICE=<name>           -> run service locally with python -m (requires venv)"
-	@echo "  make docker-run SERVICE=<name>    -> docker compose run one-off service (for debug)"
-	@echo "  make gen-protos    -> generate grpc python stubs (runs scripts/gen_protos.py)"
+	@echo "  make run SERVICE=<name>          -> run service locally with python -m (requires venv)"
+	@echo "       Valid SERVICE names: gateway, chat, rag, worker, llm"
+	@echo "  make docker-run SERVICE=<name>   -> docker compose run one-off service (for debug)"
+	@echo "  make gen-protos    -> generate grpc python stubs (runs scripts/generate_protos.py)"
 	@echo "  make install-dev   -> pip install -e ./shared and ./services/* in active venv"
-	@echo "  make test          -> run test_all_connections.py (ensure venv has deps)"
+	@echo "  make test          -> run all tests via pytest"
 
 ### Development targets (volumes, reload)
 dev-up:
@@ -68,56 +69,63 @@ prod-logs:
 	@$(DOCKER_COMPOSE) -f $(PROD_COMPOSE) logs -f
 
 ### Single-service helpers
-# Usage: make restart SERVICE=query
+# Usage: make restart SERVICE=chat_service
 restart:
 ifndef SERVICE
-	$(error SERVICE is not set. Example: make restart SERVICE=query)
+	$(error SERVICE is not set. Example: make restart SERVICE=chat_service)
 endif
 	@$(DOCKER_COMPOSE) restart $(SERVICE)
 
-# Usage: make build-service SERVICE=stt
+# Usage: make build-service SERVICE=rag_service
 build-service:
 ifndef SERVICE
-	$(error SERVICE is not set. Example: make build-service SERVICE=stt)
+	$(error SERVICE is not set. Example: make build-service SERVICE=rag_service)
 endif
 	@$(DOCKER_COMPOSE) build $(SERVICE)
 
-# Run service locally using python -m (requires venv + uv sync / editable installs)
-# SERVICE values: query, ingest, stt  (maps below)
-python-run:
+# Run service locally using python -m (requires venv + install-dev)
+# Usage: make run SERVICE=chat
+run:
 ifndef SERVICE
-	$(error SERVICE is not set. Example: make python-run SERVICE=query)
+	$(error SERVICE is not set. Example: make run SERVICE=chat)
 endif
-ifeq ($(SERVICE),query)
-	@python -m services.query_service.cli
-else ifeq ($(SERVICE),ingest)
-	@python -m services.ingestion_service.cli
-else ifeq ($(SERVICE),stt)
-	@python -m services.stt_service.cli
+ifeq ($(SERVICE),gateway)
+	@python -m services.api_gateway.api_gateway.cli
+else ifeq ($(SERVICE),chat)
+	@python -m services.chat_service.app.main
+else ifeq ($(SERVICE),rag)
+	@python -m services.rag_service.app.main
+else ifeq ($(SERVICE),worker)
+	@python -m services.rag_worker.rag_worker.cli
+else ifeq ($(SERVICE),llm)
+	@python -m services.llm_service.app.main
 else
-	$(error Unknown SERVICE '$(SERVICE)'. Valid: query, ingest, stt)
+	$(error Unknown SERVICE '$(SERVICE)'. Valid: gateway, chat, rag, worker, llm)
 endif
 
 # Run service in a one-off docker container (helpful to debug entrypoint)
-# Usage: make docker-run SERVICE=query
+# Usage: make docker-run SERVICE=chat_service
 docker-run:
 ifndef SERVICE
-	$(error SERVICE is not set. Example: make docker-run SERVICE=query)
+	$(error SERVICE is not set. Example: make docker-run SERVICE=chat_service)
 endif
 	@$(DOCKER_COMPOSE) run --rm --service-ports $(SERVICE)
 
 ### Developer utilities
 gen-protos:
-	@python scripts/gen_protos.py
+	@python scripts/generate_protos.py
 
 install-dev:
 	@echo "Installing editable packages into active venv..."
 	@python -m pip install --upgrade pip setuptools wheel
 	@python -m pip install -e ./shared || true
-	@python -m pip install -e ./services/query_service || true
-	@python -m pip install -e ./services/ingestion_service || true
-	@python -m pip install -e ./services/stt_service || true
-	@echo "Done."
+	@python -m pip install -e ./services/api_gateway || true
+	@python -m pip install -e ./services/chat_service || true
+	@python -m pip install -e ./services/rag_service || true
+	@python -m pip install -e ./services/rag_worker || true
+	@python -m pip install -e ./services/llm_service || true
+	@echo "All services installed in editable mode."
 
 test:
-	@python test_all_connections.py
+	@echo "Running all tests..."
+	@python -m pytest services

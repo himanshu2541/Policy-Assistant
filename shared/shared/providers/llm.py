@@ -2,7 +2,7 @@ import logging
 from langchain_openai import ChatOpenAI
 from shared.config import config
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("shared.providers.llm")
 
 
 class LLMProvider:

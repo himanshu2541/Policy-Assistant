@@ -1,30 +1,101 @@
 services:
-  query:
+  # ==========================================
+  # 1. API GATEWAY (Entry Point)
+  # ==========================================
+  api_gateway:
     build:
       context: .
-      dockerfile: ./services/query_service/Dockerfile
-    env_file: .env
+      dockerfile: services/api_gateway/Dockerfile
+    container_name: api_gateway
     ports:
-      - "8001:8001"
-    depends_on: ["stt"]
-
-  ingest:
-    build:
-      context: .
-      dockerfile: ./services/ingestion_service/Dockerfile
+      - "8000:8000"
     env_file: .env
-    ports:
-      - "8002:8002"
+    environment:
+      - SHARED_FOLDER_PATH=/data
+      - RAG_SERVICE_HOST=rag_service
+      - CHAT_SERVICE_HOST=chat_service
     volumes:
-      - ingest-data:/data
+      - policy_uploads:/data # Shared volume for file uploads
+    depends_on:
+      - chat_service
+      - rag_service
 
-  stt:
+  # ==========================================
+  # 2. CHAT SERVICE (Orchestrator)
+  # ==========================================
+  chat_service:
     build:
       context: .
-      dockerfile: ./services/stt_service/Dockerfile
-    env_file: .env
+      dockerfile: services/chat_service/Dockerfile
+    container_name: chat_service
     ports:
       - "50051:50051"
+    env_file: .env
+    environment:
+      - RAG_SERVICE_HOST=rag_service
+      - LLM_SERVICE_HOST=llm_service
+    depends_on:
+      - rag_service
+      - llm_service
+
+  # ==========================================
+  # 3. RAG SERVICE (Retrieval & Search)
+  # ==========================================
+  rag_service:
+    build:
+      context: .
+      dockerfile: services/rag_service/Dockerfile
+    container_name: rag_service
+    ports:
+      - "50052:50052" # gRPC Port
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis_queue:6379/0
+    depends_on:
+      - redis_queue
+
+  # ==========================================
+  # 4. RAG WORKER (Background Ingestion)
+  # ==========================================
+  rag_worker:
+    build:
+      context: .
+      dockerfile: services/rag_worker/Dockerfile
+    container_name: rag_worker
+    # No ports needed (It's a background consumer)
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis_queue:6379/0
+      - SHARED_FOLDER_PATH=/data
+    volumes:
+      - policy_uploads:/data # Read access to uploaded files
+    depends_on:
+      - redis_queue
+
+  # ==========================================
+  # 5. LLM SERVICE (Inference Engine)
+  # ==========================================
+  llm_service:
+    build:
+      context: .
+      dockerfile: services/llm_service/Dockerfile
+    container_name: llm_service
+    ports:
+      - "50053:50053" # gRPC Port
+    env_file: .env
+    # Crucial for LM Studio / Local LLM support:
+    # Allows container to access 'localhost' of your machine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ==========================================
+  # INFRASTRUCTURE
+  # ==========================================
+  redis_queue:
+    image: redis:alpine
+    container_name: redis_queue
+    ports:
+      - "6379:6379"
 
 volumes:
-  ingest-data:
+  policy_uploads:

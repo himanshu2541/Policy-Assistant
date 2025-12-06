@@ -7,8 +7,9 @@ from shared.protos import service_pb2, service_pb2_grpc
 from shared.config import config
 
 import logging
+import asyncio
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("api_gateway.app.routes.chat")
 
 router = APIRouter()
 
@@ -21,12 +22,11 @@ async def chat_endpoint(request: ChatRequest):
 
     logger.info(f"Received chat request: {request}")
 
+    target = f"{config.CHAT_SERVICE_HOST}:{config.CHAT_SERVICE_PORT}"
     try:
-        async with grpc.aio.insecure_channel(config.CHAT_SERVICE_HOST) as channel:
+        async with grpc.aio.insecure_channel(target) as channel:
             stub = service_pb2_grpc.ChatServiceStub(channel)  # type: ignore
 
-            # Assuming ChatService has a generic 'Interact' or 'Generate' method
-            # Might need to adjust based on exact proto definition
             grpc_req = service_pb2.ChatRequest(  # type: ignore
                 user_query=request.query, session_id=request.session_id
             )
@@ -46,6 +46,8 @@ async def chat_endpoint(request: ChatRequest):
             return ChatResponse(answer=response.text, contexts=formatted_context)
 
     except grpc.RpcError as e:
+        logger.error(f"gRPC Status Code: {e.code()}")
+        logger.error(f"gRPC Debug Info: {e.debug_error_string()}")  # type: ignore
         logger.error(f"gRPC Chat Service error: {e.details()}")
         raise HTTPException(
             status_code=500, detail=f"Chat Service Error: {e.details()}"
@@ -55,35 +57,68 @@ async def chat_endpoint(request: ChatRequest):
 @router.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
     """
-    Receives Audio Stream (WebM) from browser, forwards to Chat Service via gRPC.
+    Handles bidirectional audio streaming.
+    Frontend sends: Binary Audio Chunks -> Then "END" string.
+    Backend sends: JSON events {"text": "...", "event": "..."}
     """
     await websocket.accept()
+    
+    target = f"{config.CHAT_SERVICE_HOST}:{config.CHAT_SERVICE_PORT}"
+    
     try:
-        # Connect to Chat Service
-        async with grpc.aio.insecure_channel(config.CHAT_SERVICE_HOST) as channel:
-            stub = service_pb2_grpc.ChatServiceStub(channel)  # type: ignore
-
-            # Define an iterator to yield audio chunks from WebSocket to gRPC
+        async with grpc.aio.insecure_channel(target) as channel:
+            stub = service_pb2_grpc.ChatServiceStub(channel)
+            
+            # Define the Request Generator (The "Producer")
+            # This reads from WebSocket and yields to gRPC
             async def request_generator():
                 try:
                     while True:
-                        # Receive bytes from browser
-                        data = await websocket.receive_bytes()
-                        # Yield to gRPC stream
-                        yield service_pb2.AudioChunk(content=data)  # type: ignore
+                        # Use receive() to handle both bytes (Audio) and text ("END")
+                        message = await websocket.receive()
+                        
+                        if "bytes" in message:
+                            # Audio Chunk
+                            yield service_pb2.AudioChunk( # type: ignore
+                                content=message["bytes"], 
+                                session_id="default"
+                            )
+                        
+                        elif "text" in message:
+                            # Control Signal
+                            text = message["text"]
+                            if text == "END":
+                                logger.info("Received END signal from client. Closing stream.")
+                                break # Stop yielding, which closes the gRPC Request Stream
+                                
                 except WebSocketDisconnect:
-                    return
+                    logger.info("Client disconnected")
+                except Exception as e:
+                    logger.error(f"Error in request_generator: {e}")
 
-            # Call the Bidirectional Streaming RPC
-            # API Gateway acts as a proxy: Browser Audio -> Gateway -> gRPC -> Gateway -> Browser Text
+            # Consume the gRPC Response Stream (The "Consumer")
+            # This waits for the Chat Service to send back updates
             async for response in stub.StreamAudioChat(request_generator()):
-                # Send text updates back to frontend as they arrive
-                await websocket.send_json(
-                    {"text": response.text_chunk, "event": "transcription"}
-                )
+                try:
+                    # Send text updates back to frontend
+                    await websocket.send_json({
+                        "text": response.text_chunk, 
+                        "event": response.event_type # "transcription", "answer", etc.
+                    })
+                except Exception as e:
+                    logger.warning(f"Failed to send to websocket: {e}")
+                    break
 
-    except WebSocketDisconnect:
-        logger.info("Client disconnected")
+    except asyncio.CancelledError:
+        logger.info("Task cancelled (Client disconnected)")
+        # No action needed, just exit cleanly
+    except grpc.RpcError as e:
+        logger.error(f"gRPC Error: {e.details()}")
+        try:
+            await websocket.send_json({"error": "Voice service unavailable", "event": "error"})
+        except:
+            pass
     except Exception as e:
-        logger.error(f"WebSocket (ws/chat) Error: {e}")
-        await websocket.close()
+        logger.error(f"Unexpected WebSocket Error: {e}")
+    finally:
+        logger.info("WebSocket connection closed")

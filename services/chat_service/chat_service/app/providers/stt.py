@@ -4,7 +4,7 @@ from faster_whisper import WhisperModel
 
 from shared.config import config
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("chat_service.app.providers.stt")
 
 class STTProvider:
     """

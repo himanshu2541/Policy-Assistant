@@ -11,19 +11,15 @@ class Config(BaseSettings):
 
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    QUERY_HOST: str = ""
-    QUERY_PORT: int = 8001
-    INGEST_HOST: str = ""
-    INGEST_PORT: int = 8002
-    STT_HOST: str = ""
-    STT_PORT: int = 50051
+    CHAT_SERVICE_HOST: str = "localhost"
+    CHAT_SERVICE_PORT: int = 50051
 
-    CHAT_SERVICE_HOST: str = "0.0.0.0"
-    CHAT_SERVICE_PORT: int = 50052
-    RAG_SERVICE_HOST: str = "0.0.0.0"
-    RAG_SERVICE_PORT: int = 50053
-    LLM_SERVICE_HOST: str = "0.0.0.0"
-    LLM_SERVICE_PORT: int = 50054
+    RAG_SERVICE_HOST: str = "localhost"
+    RAG_SERVICE_PORT: int = 50052
+
+    LLM_SERVICE_HOST: str = "localhost"
+    LLM_SERVICE_PORT: int = 50053
+    
     API_GATEWAY_HOST: str = "0.0.0.0"
     API_GATEWAY_PORT: int = 8000
 
@@ -47,10 +43,6 @@ class Config(BaseSettings):
     UPLOAD_DIR: str = "/data/uploads"
     CHUNK_SIZE: int = 500
     CHUNK_OVERLAP: int = 50
-    # class Config:
-    #     env_file = ".env"
-    #     env_file_encoding = "utf-8"
-    #     extra = "ignore"
 
     model_config = SettingsConfigDict(
         env_file=".env",

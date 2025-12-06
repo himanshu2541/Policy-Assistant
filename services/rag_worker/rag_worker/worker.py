@@ -39,7 +39,7 @@ def main():
 
     while True:
         try:
-            result = redis_client.brpop(["rag_jobs"], timeout=0)
+            result = redis_client.brpop(["rag_jobs"], timeout=1)
             if result:
                 _, job_data_str = result # type: ignore
                 job = json.loads(job_data_str)
