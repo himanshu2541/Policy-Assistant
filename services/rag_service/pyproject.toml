@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "RAG service - Retrieval-Augmented Generation microservice (ingestion + retrieval)"
 requires-python = ">=3.10"
 dependencies = [
-    "huggingface-hub[hf-xet]>=0.36.0",
+    "grpcio>=1.76.0",
     "langchain>=1.1.2",
     "langchain-classic>=1.0.0",
     "langchain-community>=0.4.1",
@@ -18,7 +18,6 @@ dependencies = [
     "langchain-pinecone>=0.2.13",
     "pinecone-client>=6.0.0",
     "redis>=7.1.0",
-    "sentence-transformers>=5.1.2",
 ]
 
 [project.scripts]

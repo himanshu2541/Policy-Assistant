@@ -13,8 +13,7 @@ COPY services/chat_service ./services/chat_service
 COPY shared ./shared
 
 RUN python -m pip install --upgrade pip setuptools wheel \
-    && pip wheel ./shared -w /wheels \
-    && pip wheel ./services/chat_service -w /wheels \
+    && pip wheel ./shared ./services/chat_service -w /wheels \
     && pip install --no-cache-dir /wheels/*
 
 FROM python:3.11-slim AS runtime

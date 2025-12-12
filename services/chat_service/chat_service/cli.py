@@ -4,7 +4,7 @@ from chat_service.app.main import serve
 
 import logging
 
-logger = logging.getLogger("Chat-Service-CLI")
+logger = logging.getLogger("Chat-Service.CLI")
 
 
 def run():

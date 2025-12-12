@@ -1,27 +1,32 @@
 import json
 import time
 import logging
+import os
 from redis import Redis
-from pypdf import PdfReader
-
-# LangChain Utilities
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
 
 # Shared Providers
 from shared.config import config, setup_logging
 from shared.providers.embeddings import EmbeddingsProvider
 from shared.providers.vector_database import VectorDatabase
 
+from rag_worker.processors.pdf_processor import PdfProcessor
+from rag_worker.processors.text_processor import TextProcessor
+from rag_worker.services.ingestion import IngestionService
+
 setup_logging()
 logger = logging.getLogger("RAG-Worker")
 
 
-def process_pdf(file_path):
-    try:
-        reader = PdfReader(file_path)
-        return "".join([page.extract_text() or "" for page in reader.pages])
-    except Exception:
+def get_processor(file_path: str):
+    """Factory function to select the right processor based on extension."""
+    _, ext = os.path.splitext(file_path)
+    ext = ext.lower()
+
+    if ext == ".pdf":
+        return PdfProcessor()
+    elif ext in [".txt", ".md", ".json"]:  # Added support for md/json as text
+        return TextProcessor()
+    else:
         return None
 
 
@@ -35,43 +40,36 @@ def main():
     embeddings = EmbeddingsProvider(config).get_embeddings()
     vector_store = VectorDatabase(embeddings, config).get_store()
 
+    # Initialize Ingestion Service
+    ingestion_service = IngestionService(vector_store, redis_client)
+
     logger.info("Waiting for jobs...")
 
     while True:
         try:
             result = redis_client.brpop(["rag_jobs"], timeout=1)
             if result:
-                _, job_data_str = result # type: ignore
+                _, job_data_str = result  # type: ignore
                 job = json.loads(job_data_str)
-                logger.info(f"Processing: {job.get('doc_id')}")
+                doc_id = job.get("doc_id")
+                file_path = job.get("file_path")
 
-                raw_text = process_pdf(job.get("file_path"))
-                if not raw_text:
+                logger.info(f"Processing: {doc_id} ({file_path})")
+
+                processor = get_processor(file_path)
+                if not processor:
+                    logger.error(f"Unsupported file format: {file_path}")
                     continue
 
-                # Split Text
-                splitter = RecursiveCharacterTextSplitter(
-                    chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP
-                )
-                chunks = splitter.split_text(raw_text)
+                raw_text = processor.process(file_path) or ""
+                logger.info(f"Extracted {len(raw_text)} characters from {doc_id}")
 
-                # Convert to LangChain Documents
-                documents = []
-                for i, text in enumerate(chunks):
-                    documents.append(
-                        Document(
-                            page_content=text,
-                            metadata={"doc_id": job["doc_id"], "chunk_index": i},
-                        )
-                    )
-
-                vector_store.add_documents(documents)
-
-                logger.info(f"Indexed {len(documents)} chunks for {job['doc_id']}")
-
+                ingestion_service.ingest(doc_id, raw_text)
+                logger.info(f"Completed processing for: {doc_id}")
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"Worker Loop Error: {e}")
             time.sleep(1)
+
 
 if __name__ == "__main__":
     main()

@@ -3,7 +3,7 @@ import grpc
 from shared.protos import service_pb2, service_pb2_grpc
 from shared.config import config
 
-logger = logging.getLogger("chat_service.app.core.pipeline")
+logger = logging.getLogger("Chat-Service.Core.Pipeline")
 
 
 class RAGPipeline:
@@ -22,12 +22,16 @@ class RAGPipeline:
         self.rag_stub = service_pb2_grpc.RAGServiceStub(
             grpc.insecure_channel(f"{rag_host}:{self.config.RAG_SERVICE_PORT}")
         )
-        logger.info(f"RAG service stub created for {rag_host}:{self.config.RAG_SERVICE_PORT}")
+        logger.info(
+            f"RAG service stub created for {rag_host}:{self.config.RAG_SERVICE_PORT}"
+        )
 
         self.llm_stub = service_pb2_grpc.LLMServiceStub(
             grpc.insecure_channel(f"{llm_host}:{self.config.LLM_SERVICE_PORT}")
         )
-        logger.info(f"LLM service stub created for {llm_host}:{self.config.LLM_SERVICE_PORT}")
+        logger.info(
+            f"LLM service stub created for {llm_host}:{self.config.LLM_SERVICE_PORT}"
+        )
 
     def get_answer_stream(self, query_text: str):
         """
@@ -45,6 +49,11 @@ class RAGPipeline:
             rag_resp = self.rag_stub.RetrieveContext(
                 service_pb2.SearchRequest(query_text=query_text, top_k=3)  # type: ignore
             )
+
+            yield service_pb2.ChatStreamResponse(  # type: ignore
+                context_chunks=rag_resp.chunks, event_type="context"
+            )
+            
             context_str = "\n".join([c.text for c in rag_resp.chunks])
 
             logger.info(f"DEBUG: Context Length: {len(context_str)}")
@@ -57,7 +66,6 @@ class RAGPipeline:
                 service_pb2.LLMRequest(  # type: ignore
                     user_query=query_text,
                     context=context_str,
-                    system_prompt="You are a helpful policy assistant.",
                 )
             )
 
@@ -82,7 +90,7 @@ class RAGPipeline:
             service_pb2.SearchRequest(query_text=query_text, top_k=3)  # type: ignore
         )
         context_str = "\n".join([c.text for c in rag_resp.chunks])
-        
+
         logger.info(f"DEBUG: Context Length: {len(context_str)}")
         logger.info(f"DEBUG: First 100 chars of context: {context_str[:100]}")
         logger.info(f"Retrieved {len(rag_resp.chunks)} context chunks")

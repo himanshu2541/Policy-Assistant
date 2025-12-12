@@ -7,3 +7,6 @@ class DocumentContext(BaseModel):
 
 class DeleteVectorResponse(BaseModel):
     success: bool
+
+class DeleteVectorRequest(BaseModel):
+    doc_id: str

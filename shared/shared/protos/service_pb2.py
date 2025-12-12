@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1bshared/protos/service.proto\x12\npolicy_app\";\n\x0c\x43ontextChunk\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x0e\n\x06\x64oc_id\x18\x02 \x01(\t\x12\r\n\x05score\x18\x03 \x01(\x02\"]\n\nLLMRequest\x12\x15\n\rsystem_prompt\x18\x01 \x01(\t\x12\x12\n\nuser_query\x18\x02 \x01(\t\x12\x0f\n\x07\x63ontext\x18\x03 \x01(\t\x12\x13\n\x0btemperature\x18\x04 \x01(\x02\"\x1b\n\x0bLLMResponse\x12\x0c\n\x04text\x18\x01 \x01(\t\"2\n\rSearchRequest\x12\x12\n\nquery_text\x18\x01 \x01(\t\x12\r\n\x05top_k\x18\x02 \x01(\x05\":\n\x0eSearchResponse\x12(\n\x06\x63hunks\x18\x01 \x03(\x0b\x32\x18.policy_app.ContextChunk\"0\n\x0bSyncRequest\x12\x11\n\tfile_path\x18\x01 \x01(\t\x12\x0e\n\x06\x64oc_id\x18\x02 \x01(\t\".\n\x0cSyncResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0e\n\x06job_id\x18\x02 \x01(\t\"%\n\x13\x44\x65leteVectorRequest\x12\x0e\n\x06\x64oc_id\x18\x01 \x01(\t\"\'\n\x14\x44\x65leteVectorResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"\"\n\x10GetVectorRequest\x12\x0e\n\x06\x64oc_id\x18\x01 \x01(\t\")\n\x11GetVectorResponse\x12\x14\n\x0cvector_count\x18\x01 \x01(\x05\"5\n\x0b\x43hatRequest\x12\x12\n\nuser_query\x18\x01 \x01(\t\x12\x12\n\nsession_id\x18\x02 \x01(\t\"N\n\x0c\x43hatResponse\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x30\n\x0e\x63ontext_chunks\x18\x02 \x03(\x0b\x32\x18.policy_app.ContextChunk\"D\n\nAudioChunk\x12\x0f\n\x07\x63ontent\x18\x01 \x01(\x0c\x12\x12\n\nsession_id\x18\x02 \x01(\t\x12\x11\n\tmime_type\x18\x03 \x01(\t\"<\n\x12\x43hatStreamResponse\x12\x12\n\ntext_chunk\x18\x01 \x01(\t\x12\x12\n\nevent_type\x18\x02 \x01(\t2\x96\x01\n\nLLMService\x12\x43\n\x10GenerateResponse\x12\x16.policy_app.LLMRequest\x1a\x17.policy_app.LLMResponse\x12\x43\n\x0eStreamResponse\x12\x16.policy_app.LLMRequest\x1a\x17.policy_app.LLMResponse0\x01\x32\xb7\x02\n\nRAGService\x12H\n\x0fRetrieveContext\x12\x19.policy_app.SearchRequest\x1a\x1a.policy_app.SearchResponse\x12@\n\x0bTriggerSync\x12\x17.policy_app.SyncRequest\x1a\x18.policy_app.SyncResponse\x12R\n\rDeleteVectors\x12\x1f.policy_app.DeleteVectorRequest\x1a .policy_app.DeleteVectorResponse\x12I\n\nGetVectors\x12\x1c.policy_app.GetVectorRequest\x1a\x1d.policy_app.GetVectorResponse2\x9b\x01\n\x0b\x43hatService\x12=\n\x08Interact\x12\x17.policy_app.ChatRequest\x1a\x18.policy_app.ChatResponse\x12M\n\x0fStreamAudioChat\x12\x16.policy_app.AudioChunk\x1a\x1e.policy_app.ChatStreamResponse(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1bshared/protos/service.proto\x12\npolicy_app\";\n\x0c\x43ontextChunk\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x0e\n\x06\x64oc_id\x18\x02 \x01(\t\x12\r\n\x05score\x18\x03 \x01(\x02\"]\n\nLLMRequest\x12\x15\n\rsystem_prompt\x18\x01 \x01(\t\x12\x12\n\nuser_query\x18\x02 \x01(\t\x12\x0f\n\x07\x63ontext\x18\x03 \x01(\t\x12\x13\n\x0btemperature\x18\x04 \x01(\x02\"\x1b\n\x0bLLMResponse\x12\x0c\n\x04text\x18\x01 \x01(\t\"2\n\rSearchRequest\x12\x12\n\nquery_text\x18\x01 \x01(\t\x12\r\n\x05top_k\x18\x02 \x01(\x05\":\n\x0eSearchResponse\x12(\n\x06\x63hunks\x18\x01 \x03(\x0b\x32\x18.policy_app.ContextChunk\"0\n\x0bSyncRequest\x12\x11\n\tfile_path\x18\x01 \x01(\t\x12\x0e\n\x06\x64oc_id\x18\x02 \x01(\t\".\n\x0cSyncResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0e\n\x06job_id\x18\x02 \x01(\t\"%\n\x13\x44\x65leteVectorRequest\x12\x0e\n\x06\x64oc_id\x18\x01 \x01(\t\"\'\n\x14\x44\x65leteVectorResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\"\"\n\x10GetVectorRequest\x12\x0e\n\x06\x64oc_id\x18\x01 \x01(\t\")\n\x11GetVectorResponse\x12\x14\n\x0cvector_count\x18\x01 \x01(\x05\"\x07\n\x05\x45mpty\">\n\x10ListDocsResponse\x12*\n\x04\x64ocs\x18\x01 \x03(\x0b\x32\x1c.policy_app.DocumentMetadata\"W\n\x10\x44ocumentMetadata\x12\x0e\n\x06\x64oc_id\x18\x01 \x01(\t\x12\x10\n\x08\x66ilename\x18\x02 \x01(\t\x12\x0e\n\x06status\x18\x03 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\t\"5\n\x0b\x43hatRequest\x12\x12\n\nuser_query\x18\x01 \x01(\t\x12\x12\n\nsession_id\x18\x02 \x01(\t\"N\n\x0c\x43hatResponse\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x30\n\x0e\x63ontext_chunks\x18\x02 \x03(\x0b\x32\x18.policy_app.ContextChunk\"D\n\nAudioChunk\x12\x0f\n\x07\x63ontent\x18\x01 \x01(\x0c\x12\x12\n\nsession_id\x18\x02 \x01(\t\x12\x11\n\tmime_type\x18\x03 \x01(\t\"n\n\x12\x43hatStreamResponse\x12\x12\n\ntext_chunk\x18\x01 \x01(\t\x12\x12\n\nevent_type\x18\x02 \x01(\t\x12\x30\n\x0e\x63ontext_chunks\x18\x03 \x03(\x0b\x32\x18.policy_app.ContextChunk2\x96\x01\n\nLLMService\x12\x43\n\x10GenerateResponse\x12\x16.policy_app.LLMRequest\x1a\x17.policy_app.LLMResponse\x12\x43\n\x0eStreamResponse\x12\x16.policy_app.LLMRequest\x1a\x17.policy_app.LLMResponse0\x01\x32\xf9\x02\n\nRAGService\x12H\n\x0fRetrieveContext\x12\x19.policy_app.SearchRequest\x1a\x1a.policy_app.SearchResponse\x12@\n\x0bTriggerSync\x12\x17.policy_app.SyncRequest\x1a\x18.policy_app.SyncResponse\x12R\n\rDeleteVectors\x12\x1f.policy_app.DeleteVectorRequest\x1a .policy_app.DeleteVectorResponse\x12I\n\nGetVectors\x12\x1c.policy_app.GetVectorRequest\x1a\x1d.policy_app.GetVectorResponse\x12@\n\rListDocuments\x12\x11.policy_app.Empty\x1a\x1c.policy_app.ListDocsResponse2\x9b\x01\n\x0b\x43hatService\x12=\n\x08Interact\x12\x17.policy_app.ChatRequest\x1a\x18.policy_app.ChatResponse\x12M\n\x0fStreamAudioChat\x12\x16.policy_app.AudioChunk\x1a\x1e.policy_app.ChatStreamResponse(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -53,18 +53,24 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETVECTORREQUEST']._serialized_end=552
   _globals['_GETVECTORRESPONSE']._serialized_start=554
   _globals['_GETVECTORRESPONSE']._serialized_end=595
-  _globals['_CHATREQUEST']._serialized_start=597
-  _globals['_CHATREQUEST']._serialized_end=650
-  _globals['_CHATRESPONSE']._serialized_start=652
-  _globals['_CHATRESPONSE']._serialized_end=730
-  _globals['_AUDIOCHUNK']._serialized_start=732
-  _globals['_AUDIOCHUNK']._serialized_end=800
-  _globals['_CHATSTREAMRESPONSE']._serialized_start=802
-  _globals['_CHATSTREAMRESPONSE']._serialized_end=862
-  _globals['_LLMSERVICE']._serialized_start=865
-  _globals['_LLMSERVICE']._serialized_end=1015
-  _globals['_RAGSERVICE']._serialized_start=1018
-  _globals['_RAGSERVICE']._serialized_end=1329
-  _globals['_CHATSERVICE']._serialized_start=1332
-  _globals['_CHATSERVICE']._serialized_end=1487
+  _globals['_EMPTY']._serialized_start=597
+  _globals['_EMPTY']._serialized_end=604
+  _globals['_LISTDOCSRESPONSE']._serialized_start=606
+  _globals['_LISTDOCSRESPONSE']._serialized_end=668
+  _globals['_DOCUMENTMETADATA']._serialized_start=670
+  _globals['_DOCUMENTMETADATA']._serialized_end=757
+  _globals['_CHATREQUEST']._serialized_start=759
+  _globals['_CHATREQUEST']._serialized_end=812
+  _globals['_CHATRESPONSE']._serialized_start=814
+  _globals['_CHATRESPONSE']._serialized_end=892
+  _globals['_AUDIOCHUNK']._serialized_start=894
+  _globals['_AUDIOCHUNK']._serialized_end=962
+  _globals['_CHATSTREAMRESPONSE']._serialized_start=964
+  _globals['_CHATSTREAMRESPONSE']._serialized_end=1074
+  _globals['_LLMSERVICE']._serialized_start=1077
+  _globals['_LLMSERVICE']._serialized_end=1227
+  _globals['_RAGSERVICE']._serialized_start=1230
+  _globals['_RAGSERVICE']._serialized_end=1607
+  _globals['_CHATSERVICE']._serialized_start=1610
+  _globals['_CHATSERVICE']._serialized_end=1765
 # @@protoc_insertion_point(module_scope)

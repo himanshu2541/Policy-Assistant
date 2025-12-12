@@ -9,7 +9,7 @@ from shared.config import config
 import logging
 import asyncio
 
-logger = logging.getLogger("api_gateway.app.routes.chat")
+logger = logging.getLogger("API-Gateway.Routes.Chat")
 
 router = APIRouter()
 
@@ -62,13 +62,13 @@ async def websocket_endpoint(websocket: WebSocket):
     Backend sends: JSON events {"text": "...", "event": "..."}
     """
     await websocket.accept()
-    
+
     target = f"{config.CHAT_SERVICE_HOST}:{config.CHAT_SERVICE_PORT}"
-    
+
     try:
         async with grpc.aio.insecure_channel(target) as channel:
             stub = service_pb2_grpc.ChatServiceStub(channel)
-            
+
             # Define the Request Generator (The "Producer")
             # This reads from WebSocket and yields to gRPC
             async def request_generator():
@@ -76,21 +76,22 @@ async def websocket_endpoint(websocket: WebSocket):
                     while True:
                         # Use receive() to handle both bytes (Audio) and text ("END")
                         message = await websocket.receive()
-                        
+
                         if "bytes" in message:
                             # Audio Chunk
-                            yield service_pb2.AudioChunk( # type: ignore
-                                content=message["bytes"], 
-                                session_id="default"
+                            yield service_pb2.AudioChunk(  # type: ignore
+                                content=message["bytes"], session_id="default"
                             )
-                        
+
                         elif "text" in message:
                             # Control Signal
                             text = message["text"]
                             if text == "END":
-                                logger.info("Received END signal from client. Closing stream.")
-                                break # Stop yielding, which closes the gRPC Request Stream
-                                
+                                logger.info(
+                                    "Received END signal from client. Closing stream."
+                                )
+                                break  # Stop yielding, which closes the gRPC Request Stream
+
                 except WebSocketDisconnect:
                     logger.info("Client disconnected")
                 except Exception as e:
@@ -100,11 +101,20 @@ async def websocket_endpoint(websocket: WebSocket):
             # This waits for the Chat Service to send back updates
             async for response in stub.StreamAudioChat(request_generator()):
                 try:
+                    contexts_data = []
+                    if response.context_chunks:
+                        contexts_data = [
+                            {"text": c.text, "doc_id": c.doc_id, "score": c.score}
+                            for c in response.context_chunks
+                        ]
                     # Send text updates back to frontend
-                    await websocket.send_json({
-                        "text": response.text_chunk, 
-                        "event": response.event_type # "transcription", "answer", etc.
-                    })
+                    await websocket.send_json(
+                        {
+                            "text": response.text_chunk,
+                            "event": response.event_type,  # "transcription", "answer", etc.
+                            "contexts": contexts_data,
+                        }
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to send to websocket: {e}")
                     break
@@ -115,7 +125,9 @@ async def websocket_endpoint(websocket: WebSocket):
     except grpc.RpcError as e:
         logger.error(f"gRPC Error: {e.details()}")
         try:
-            await websocket.send_json({"error": "Voice service unavailable", "event": "error"})
+            await websocket.send_json(
+                {"error": "Voice service unavailable", "event": "error"}
+            )
         except:
             pass
     except Exception as e:

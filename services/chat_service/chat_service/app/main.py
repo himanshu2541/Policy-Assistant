@@ -8,7 +8,7 @@ from chat_service.app.core.transcriber import TranscriptionService
 from chat_service.app.core.pipeline import RAGPipeline
 
 setup_logging()
-logger = logging.getLogger("Chat-Service")
+logger = logging.getLogger("Chat-Service.Main")
 
 
 class ChatService(service_pb2_grpc.ChatServiceServicer):

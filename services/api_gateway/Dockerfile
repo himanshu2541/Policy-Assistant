@@ -13,8 +13,7 @@ COPY services/api_gateway ./services/api_gateway
 COPY shared ./shared
 
 RUN python -m pip install --upgrade pip setuptools wheel \
-    && pip wheel ./shared -w /wheels \
-    && pip wheel ./services/api_gateway -w /wheels \
+    && pip wheel ./shared ./services/api_gateway -w /wheels \
     && pip install --no-cache-dir /wheels/*
 
 FROM python:3.11-slim AS runtime

@@ -15,8 +15,7 @@ COPY shared ./shared
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
 RUN python -m pip install --upgrade pip setuptools wheel \
-    && pip wheel ./shared -w /wheels \
-    && pip wheel ./services/rag_worker -w /wheels \
+    && pip wheel ./shared ./services/rag_worker -w /wheels \
     && pip install --no-cache-dir /wheels/*
 
 FROM python:3.11-slim AS runtime

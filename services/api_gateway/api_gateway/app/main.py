@@ -2,12 +2,12 @@ from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
-from api_gateway.app.routes import chat, upload, vectors
+from api_gateway.app.routes import chat, upload, admin
+
 import logging
 from shared.config import setup_logging
-
 setup_logging()
-logger = logging.getLogger("api_gateway")
+logger = logging.getLogger("API-Gateway.Main")
 
 
 @asynccontextmanager
@@ -32,10 +32,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(upload.router, prefix="/api/v1", tags=["Upload"])
+app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])
 app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
-app.include_router(vectors.router, prefix="/api/v1/vectors", tags=["Vectors"])
-
+app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 
 @app.get("/", tags=["Root"])
 async def root():

@@ -19,3 +19,13 @@ dist
 .venv
 venv
 node_modules
+models/
+weights/
+*.gguf
+*.bin
+*.pth
+.cache
+chroma_db/
+lancedb/
+faiss_index/
+data/

@@ -40,7 +40,7 @@ class Config(BaseSettings):
     STT_COMPUTE_TYPE: str = "int8"
 
     RELOAD: bool = True if ENV == "development" else False
-    UPLOAD_DIR: str = "/data/uploads"
+    UPLOAD_DIR: str = "./data/uploads"
     CHUNK_SIZE: int = 500
     CHUNK_OVERLAP: int = 50
 

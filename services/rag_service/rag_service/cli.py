@@ -6,7 +6,7 @@ logger = logging.getLogger("RAG-Service-CLI")
 
 
 def run():
-    from rag_service.app.main import serve
+    from rag_service.app.main import main as serve
 
     logger.info(f"Starting RAG Service...")
     try:

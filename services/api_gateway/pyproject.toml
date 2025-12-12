@@ -12,6 +12,7 @@ dependencies = [
     "grpcio>=1.76.0",
     "pydantic>=2.12.5",
     "python-multipart>=0.0.20",
+    "redis>=7.1.0",
     "uvicorn[standard]>=0.38.0",
 ]
 

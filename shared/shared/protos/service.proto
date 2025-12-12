@@ -54,6 +54,8 @@ service RAGService {
   
   // Debug/Management: Check vectors for a doc
   rpc GetVectors (GetVectorRequest) returns (GetVectorResponse);
+
+  rpc ListDocuments (Empty) returns (ListDocsResponse);
 }
 
 message SearchRequest {
@@ -92,6 +94,19 @@ message GetVectorResponse {
   int32 vector_count = 1;
 }
 
+message Empty {}
+
+message ListDocsResponse {
+  repeated DocumentMetadata docs = 1;
+}
+
+message DocumentMetadata {
+  string doc_id = 1;
+  string filename = 2;
+  string status = 3;     // "synced", "processing", "error"
+  string timestamp = 4;  // ISO string
+}
+
 // ==========================================
 // 3. CHAT SERVICE (The Orchestrator)
 // Used by: API Gateway (for /chat and /ws/chat)
@@ -124,4 +139,5 @@ message AudioChunk {
 message ChatStreamResponse {
   string text_chunk = 1;      // Partial text (transcription or answer)
   string event_type = 2;      // "transcription", "thinking", "answer", "done"
+  repeated ContextChunk context_chunks = 3; // Context used for answer
 }
