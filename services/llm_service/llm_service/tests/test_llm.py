@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from llm_service.app.main import LLMService
-from llm_service.app.providers.chain import ChainProvider
+from services.llm_service.llm_service.app.providers.chain_strategies import ChainProvider
 from shared.protos import service_pb2
 
 

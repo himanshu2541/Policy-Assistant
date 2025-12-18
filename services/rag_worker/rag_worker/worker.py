@@ -9,27 +9,12 @@ from shared.providers.embeddings import EmbeddingFactory
 from shared.providers.vector_database import VectorDBFactory
 from shared.providers.redis import RedisFactory
 
-from rag_worker.processors.pdf_processor import PdfProcessor
-from rag_worker.processors.text_processor import TextProcessor
+from rag_worker.providers.processors import ProcessorFactory
 
 from rag_worker.services.ingestion import IngestionService
 
 setup_logging()
-logger = logging.getLogger("RAG-Worker")
-
-
-def get_processor(file_path: str):
-    """Factory function to select the right processor based on extension."""
-    _, ext = os.path.splitext(file_path)
-    ext = ext.lower()
-
-    if ext == ".pdf":
-        return PdfProcessor()
-    elif ext in [".txt", ".md", ".json"]:  # Added support for md/json as text
-        return TextProcessor()
-    else:
-        return None
-
+logger = logging.getLogger("RAG-Worker.Worker")
 
 async def main():
     logger.info("Starting RAG Worker...")
@@ -57,7 +42,7 @@ async def main():
 
                 logger.info(f"Processing: {doc_id} ({file_path})")
 
-                processor = get_processor(file_path)
+                processor = ProcessorFactory.get_processor(file_path)
                 if not processor:
                     logger.error(f"Unsupported file format: {file_path}")
                     continue

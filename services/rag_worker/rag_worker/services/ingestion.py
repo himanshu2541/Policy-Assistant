@@ -4,20 +4,15 @@ import json
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from shared.config import config
+from rag_worker.providers.splitter import TextSplitterFactory
 
 logger = logging.getLogger("RAG-Worker.Services.Ingestion")
-
 
 class IngestionService:
     def __init__(self, vector_store, redis_client):
         self.vector_store = vector_store
         self.redis_client = redis_client
-        self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=config.CHUNK_SIZE,
-            chunk_overlap=config.CHUNK_OVERLAP,
-            separators=["\n\n", "\n", " ", ""],
-            length_function=len,
-        )
+        self.splitter = TextSplitterFactory.get_splitter(config)
 
     async def ingest(self, doc_id: str, raw_text: str, filename: str = "Unknown"):
         if not raw_text:

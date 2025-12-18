@@ -1,47 +1,39 @@
 import logging
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import Runnable
 from shared.config import config
-
 from shared.providers.llm import LLMFactory
+from llm_service.app.providers.chain_strategies import ChainBuilderFactory
 
 logger = logging.getLogger("LLM-Service.Providers.Chain")
 
+
 class ChainProvider:
     """
-    Manages the creation of the generation chain (Prompt -> LLM -> Parser).
+    Manages the creation of generation chains using the Strategy Pattern.
     """
 
     def __init__(self, config_instance=config):
         self.config = config_instance
+        # Initialize Infrastructure (LLM & Parser)
         self.llm = LLMFactory.get_llm(self.config)
         self.output_parser = StrOutputParser()
 
-    def create_chain(self, system_prompt: str = "") -> Runnable:
+    def create_chain(
+        self, system_prompt: str = "", strategy_type: str = "policy_chat"
+    ) -> Runnable:
         """
-        Builds the LCEL chain with a dynamic system prompt.
-        """
-        default_system = """You are a specialized Policy Assistant. 
-        You strictly answer questions based ONLY on the provided context below.
-        If the answer is not in the context, state "I do not have information on that topic in the policy documents."
-        Do not use outside knowledge. (Keep answers elaborative and easy to understand.)
-        """
+        Builds the LCEL chain using a selected strategy.
 
-        final_system_prompt = system_prompt if system_prompt else default_system
+        :param system_prompt: Optional override for system prompt.
+        :param strategy_type: The key for the strategy (e.g., 'policy_chat', 'summarization').
+        Defaults to 'policy_chat'.
+        """
+        builder = ChainBuilderFactory.get_builder(strategy_type)
 
-        # 2. Create Template
-        # We expect 'context' and 'input' (user_query) variables
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", final_system_prompt),
-                ("system", "Context:\n{context}"),
-                ("human", "{input}"),
-            ]
+        chain = builder.build(
+            llm=self.llm, output_parser=self.output_parser, system_prompt=system_prompt
         )
 
-        # 3. Build Chain (LCEL)
-        # prompt | llm | output_parser
-        chain = prompt | self.llm | self.output_parser
-
+        logger.info(f"Created chain using strategy: {strategy_type}")
         return chain

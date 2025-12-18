@@ -16,12 +16,25 @@ class LLMService(service_pb2_grpc.LLMServiceServicer):
         self.chain_provider = chain_provider
         logger.info("LLM Service initialized with dependencies")
 
+    def _get_chain(self, request):
+        """
+        Helper to extract strategy and create the chain.
+        Centralizes the default logic and creation call.
+        Raises ValueError if strategy is unknown (handled by callers).
+        """
+        strategy = getattr(request, "strategy", "policy_chat") or "policy_chat"
+        
+        return self.chain_provider.create_chain(
+            system_prompt=request.system_prompt,
+            strategy_type=strategy
+        )
+    
     def GenerateResponse(self, request, context):
         try:
             logger.info(f"Generating response for: {request.user_query[:20]}...")
 
             # 1. Get the Chain
-            chain = self.chain_provider.create_chain(request.system_prompt)
+            chain = self._get_chain(request)
             logger.info("Chain created for generation")
 
             # 2. Run the Chain
@@ -45,7 +58,7 @@ class LLMService(service_pb2_grpc.LLMServiceServicer):
             logger.info(f"Streaming response for: {request.user_query[:20]}...")
 
             # 1. Get the Chain
-            chain = self.chain_provider.create_chain(request.system_prompt)
+            chain = self._get_chain(request)
             logger.info("Chain created for streaming")
 
             # 2. Stream the Chain
