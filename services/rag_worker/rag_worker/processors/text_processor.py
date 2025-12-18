@@ -1,7 +1,7 @@
 import logging
 from .base import BaseFileProcessor
 
-logger = logging.getLogger("rag_worker.preprocessors.text_preprocessor")
+logger = logging.getLogger("RAG-Worker.Processors.TextProcessor")
 
 class TextProcessor(BaseFileProcessor):
     def process(self, file_path: str) -> str | None:

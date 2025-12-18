@@ -2,7 +2,7 @@ import logging
 from pypdf import PdfReader
 from .base import BaseFileProcessor
 
-logger = logging.getLogger("rag_worker.preprocessors.pdf_preprocessor")
+logger = logging.getLogger("RAG-Worker.Processors.PDFProcessor")
 
 class PdfProcessor(BaseFileProcessor):
     def process(self, file_path: str) -> str | None:

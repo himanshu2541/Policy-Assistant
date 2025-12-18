@@ -1,7 +1,4 @@
 services:
-  # ==========================================
-  # 1. API GATEWAY (Hot Reload Enabled)
-  # ==========================================
   api_gateway:
     build:
       context: .
@@ -14,6 +11,9 @@ services:
       - UPLOAD_DIR=/data/uploads
       - RAG_SERVICE_HOST=rag_service
       - CHAT_SERVICE_HOST=chat_service
+      - LLM_SERVICE_HOST=llm_service
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis_queue:6379/0
     # Map local code to container for hot-reloading
     volumes:
       - ./services/api_gateway:/app/services/api_gateway
@@ -24,10 +24,6 @@ services:
     depends_on:
       - chat_service
       - rag_service
-
-  # ==========================================
-  # 2. CHAT SERVICE
-  # ==========================================
   chat_service:
     build:
       context: .
@@ -39,6 +35,7 @@ services:
     environment:
       - RAG_SERVICE_HOST=rag_service
       - LLM_SERVICE_HOST=llm_service
+      - PYTHONPATH=/app
     volumes:
       - ./services/chat_service:/app/services/chat_service
       - ./shared:/app/shared
@@ -48,9 +45,6 @@ services:
       - rag_service
       - llm_service
 
-  # ==========================================
-  # 3. RAG SERVICE
-  # ==========================================
   rag_service:
     build:
       context: .
@@ -61,6 +55,9 @@ services:
     env_file: .env
     environment:
       - REDIS_URL=redis://redis_queue:6379/0
+      - CHAT_SERVICE_HOST=chat_service
+      - LLM_SERVICE_HOST=llm_service
+      - PYTHONPATH=/app
     volumes:
       - ./services/rag_service:/app/services/rag_service
       - ./shared:/app/shared
@@ -68,9 +65,6 @@ services:
     depends_on:
       - redis_queue
 
-  # ==========================================
-  # 4. RAG WORKER
-  # ==========================================
   rag_worker:
     build:
       context: .
@@ -80,6 +74,10 @@ services:
     environment:
       - REDIS_URL=redis://redis_queue:6379/0
       - UPLOAD_DIR=/data/uploads
+      - RAG_SERVICE_HOST=rag_service
+      - CHAT_SERVICE_HOST=chat_service
+      - LLM_SERVICE_HOST=llm_service
+      - PYTHONPATH=/app
     volumes:
       - ./services/rag_worker:/app/services/rag_worker
       - ./shared:/app/shared
@@ -88,9 +86,6 @@ services:
     depends_on:
       - redis_queue
 
-  # ==========================================
-  # 5. LLM SERVICE
-  # ==========================================
   llm_service:
     build:
       context: .
@@ -99,15 +94,19 @@ services:
     ports:
       - "50053:50053"
     env_file: .env
+    environment:
+      - PYTHONPATH=/app
+      - LLM_BASE_URL=http://host.docker.internal:1234/v1
+      - CHAT_SERVICE_HOST=chat_service
+      - RAG_SERVICE_HOST=rag_service
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./services/llm_service:/app/services/llm_service
       - ./shared:/app/shared
     command: python -m llm_service.cli
-  # ==========================================
-  # INFRASTRUCTURE
-  # ==========================================
+
+
   redis_queue:
     image: redis:alpine
     container_name: redis_queue_dev

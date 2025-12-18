@@ -1,34 +1,49 @@
-FROM python:3.11-slim AS build
+FROM python:3.11-slim-bookworm
 
-ENV DEBIAN_FRONTEND=noninteractive
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /build
-
-COPY pyproject.toml ./pyproject.toml
-COPY services/chat_service ./services/chat_service
-COPY shared ./shared
-
-RUN python -m pip install --upgrade pip setuptools wheel \
-    && pip wheel ./shared ./services/chat_service -w /wheels \
-    && pip install --no-cache-dir /wheels/*
-
-FROM python:3.11-slim AS runtime
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-RUN addgroup --system app && adduser --system --ingroup app app
 WORKDIR /app
 
-COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=build /usr/local/bin /usr/local/bin
+# Chat service often needs ffmpeg/libs for audio and faster-whisper may pull torch.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    ffmpeg \
+    libsndfile1 \
+    libgomp1 \
+    libopenblas-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY services/chat_service /app/services/chat_service
-COPY shared /app/shared
+COPY pyproject.toml /ws/pyproject.toml
 
-USER app
+COPY shared ./shared
+COPY shared/pyproject.toml /ws/shared/pyproject.toml
+
+COPY services/chat_service ./services/chat_service
+COPY services/chat_service/pyproject.toml /ws/services/chat_service/pyproject.toml
+
+RUN --mount=type=bind,source=.,target=/ws \
+    uv export --project /ws --frozen \
+    --package shared \
+    --format requirements-txt --no-emit-project \
+    > /tmp/requirements_shared.txt
+
+RUN --mount=type=bind,source=.,target=/ws \
+    uv export --project /ws --frozen \
+    --package chat_service \
+    --format requirements-txt --no-emit-project \
+    > /tmp/requirements_service.txt
+
+RUN uv pip install --system --no-cache-dir \
+    -r /tmp/requirements_shared.txt \
+    -r /tmp/requirements_service.txt
+
+RUN uv pip install --system --no-deps ./shared
+RUN uv pip install --system --no-deps ./services/chat_service
+
 EXPOSE 50051
 CMD ["chat-service"]

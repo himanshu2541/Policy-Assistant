@@ -1,35 +1,52 @@
-FROM python:3.11-slim AS build
+FROM python:3.11-slim-bookworm
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /build
-
-COPY pyproject.toml ./pyproject.toml
-COPY services/rag_worker ./services/rag_worker
-COPY shared ./shared
-
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-
-RUN python -m pip install --upgrade pip setuptools wheel \
-    && pip wheel ./shared ./services/rag_worker -w /wheels \
-    && pip install --no-cache-dir /wheels/*
-
-FROM python:3.11-slim AS runtime
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-RUN addgroup --system app && adduser --system --ingroup app app
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 WORKDIR /app
 
-COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=build /usr/local/bin /usr/local/bin
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    ffmpeg \
+    libsndfile1 \
+    libgomp1 \
+    libopenblas-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY services/rag_worker /app/services/rag_worker
-COPY shared /app/shared
+COPY pyproject.toml /ws/pyproject.toml
 
-USER app
+COPY shared ./shared
+COPY shared/pyproject.toml /ws/shared/pyproject.toml
+
+COPY services/rag_worker ./services/rag_worker
+COPY services/rag_worker/pyproject.toml /ws/services/rag_worker/pyproject.toml
+
+RUN --mount=type=bind,source=.,target=/ws \
+    uv export --project /ws --frozen \
+    --package shared \
+    --format requirements-txt --no-emit-project \
+    > /tmp/requirements_shared.txt
+
+RUN --mount=type=bind,source=.,target=/ws \
+    uv export --project /ws --frozen \
+    --package rag_worker \
+    --format requirements-txt --no-emit-project \
+    > /tmp/requirements_service.txt
+
+# Install dependencies, allow best-match across indexes so torch can come from the cpu index
+RUN uv pip install --system --no-cache-dir \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    --index-strategy=unsafe-best-match \
+    -r /tmp/requirements_shared.txt \
+    -r /tmp/requirements_service.txt
+
+COPY shared ./shared
+RUN uv pip install --system --no-deps ./shared
+
+COPY services/rag_worker ./services/rag_worker
+RUN uv pip install --system --no-deps ./services/rag_worker
+
 CMD ["rag-worker"]

@@ -15,9 +15,10 @@ dependencies = [
     "langchain-core>=1.1.1",
     "langchain-huggingface>=1.1.0",
     "langchain-openai>=1.1.0",
-    "langchain-pinecone>=0.2.13",
-    "pinecone-client>=6.0.0",
     "redis>=7.1.0",
+    "sentence-transformers>=5.1.2",
+    "torch>=2.5.1,<2.6",
+    "torchvision>=0.20.1,<0.21",
 ]
 
 [project.scripts]
@@ -26,6 +27,6 @@ rag-service = "rag_service.cli:run"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["rag_service", "rag_service.*"]
-  
+
 [tool.uv.sources]
 shared = { workspace = true }

@@ -16,7 +16,7 @@ dependencies = [
     "langchain-huggingface>=1.1.0",
     "langchain-openai>=1.1.0",
     "langchain-pinecone>=0.2.13",
-    "pinecone-client>=6.0.0",
+    "pinecone",
     "protobuf>=6.33.1",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.12.0",

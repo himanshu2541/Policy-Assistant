@@ -3,12 +3,15 @@
 #   make dev-up            # bring up development compose (volumes + reload)
 #   make prod-up           # bring up production compose (images baked in)
 #   make restart SERVICE=chat  # restart single service container
-#   make run SERVICE=chat      # run service locally (python -m ...)
+#   make run SERVICE=chat      # run service locally using uv (uv run ...)
 #   make gen-protos        # generate grpc stubs (uses scripts/generate_protos.py)
-#   make install-dev       # pip install -e shared & services in the active venv
+#   make install-dev       # sync uv workspace (installs all services in editable mode)
 #   make test              # run all pytest suites
 
 SHELL := /bin/bash
+
+# Enable BuildKit for Docker (Required for the new Dockerfiles)
+export DOCKER_BUILDKIT=1
 
 # Files
 DEV_COMPOSE := docker-compose.dev.yml
@@ -35,16 +38,16 @@ help:
 	@echo "  make prod-logs     -> follow logs for production"
 	@echo "  make restart SERVICE=<name>      -> restart single service container (by compose service name)"
 	@echo "  make build-service SERVICE=<name> -> build single service image"
-	@echo "  make run SERVICE=<name>          -> run service locally with python -m (requires venv)"
+	@echo "  make run SERVICE=<name>          -> run service locally using 'uv run' (uses project.scripts)"
 	@echo "       Valid SERVICE names: gateway, chat, rag, worker, llm"
 	@echo "  make docker-run SERVICE=<name>   -> docker compose run one-off service (for debug)"
 	@echo "  make gen-protos    -> generate grpc python stubs (runs scripts/generate_protos.py)"
-	@echo "  make install-dev   -> pip install -e ./shared and ./services/* in active venv"
+	@echo "  make install-dev   -> run 'uv sync' to install workspace in editable mode"
 	@echo "  make test          -> run all tests via pytest"
 
 ### Development targets (volumes, reload)
 dev-up:
-	@$(DOCKER_COMPOSE) -f $(DEV_COMPOSE) up --build
+	@$(DOCKER_COMPOSE) -f $(DEV_COMPOSE) up
 
 dev-down:
 	@$(DOCKER_COMPOSE) -f $(DEV_COMPOSE) down
@@ -57,7 +60,7 @@ dev-logs:
 
 ### Production targets (baked images)
 prod-up:
-	@$(DOCKER_COMPOSE) -f $(PROD_COMPOSE) up --build -d
+	@$(DOCKER_COMPOSE) -f $(PROD_COMPOSE) up -d
 
 prod-down:
 	@$(DOCKER_COMPOSE) -f $(PROD_COMPOSE) down
@@ -83,22 +86,22 @@ ifndef SERVICE
 endif
 	@$(DOCKER_COMPOSE) build $(SERVICE)
 
-# Run service locally using python -m (requires venv + install-dev)
+# Run service locally using uv run (uses the entry points defined in pyproject.toml)
 # Usage: make run SERVICE=chat
 run:
 ifndef SERVICE
 	$(error SERVICE is not set. Example: make run SERVICE=chat)
 endif
 ifeq ($(SERVICE),gateway)
-	@python -m services.api_gateway.api_gateway.cli
+	@uv run api-gateway
 else ifeq ($(SERVICE),chat)
-	@python -m services.chat_service.app.main
+	@uv run chat-service
 else ifeq ($(SERVICE),rag)
-	@python -m services.rag_service.app.main
+	@uv run rag-service
 else ifeq ($(SERVICE),worker)
-	@python -m services.rag_worker.rag_worker.cli
+	@uv run rag-worker
 else ifeq ($(SERVICE),llm)
-	@python -m services.llm_service.app.main
+	@uv run llm-service
 else
 	$(error Unknown SERVICE '$(SERVICE)'. Valid: gateway, chat, rag, worker, llm)
 endif
@@ -113,19 +116,13 @@ endif
 
 ### Developer utilities
 gen-protos:
-	@python scripts/generate_protos.py
+	@uv run python scripts/generate_protos.py
 
 install-dev:
-	@echo "Installing editable packages into active venv..."
-	@python -m pip install --upgrade pip setuptools wheel
-	@python -m pip install -e ./shared || true
-	@python -m pip install -e ./services/api_gateway || true
-	@python -m pip install -e ./services/chat_service || true
-	@python -m pip install -e ./services/rag_service || true
-	@python -m pip install -e ./services/rag_worker || true
-	@python -m pip install -e ./services/llm_service || true
-	@echo "All services installed in editable mode."
+	@echo "Syncing uv workspace..."
+	@uv sync
+	@echo "Workspace synced. All services installed in editable mode."
 
 test:
 	@echo "Running all tests..."
-	@python -m pytest services
+	@uv run pytest services
