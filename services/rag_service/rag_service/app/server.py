@@ -5,11 +5,11 @@ from shared.protos import service_pb2_grpc
 from shared.config import config
 from rag_service.app.service import RAGService
 
-logger = logging.getLogger("RAG-Server")
+logger = logging.getLogger("RAG-Service.App.Server")
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    service_pb2_grpc.add_RAGServiceServicer_to_server(RAGService(), server)
+    service_pb2_grpc.add_RAGServiceServicer_to_server(RAGService(settings=config), server)
     
     port = config.RAG_SERVICE_PORT
     server.add_insecure_port(f"[::]:{port}")

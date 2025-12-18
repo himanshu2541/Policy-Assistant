@@ -1,18 +1,15 @@
-import os
-import time
-import tempfile
 import logging
 from typing import Iterable
 from shared.protos import service_pb2
 from chat_service.app.providers.stt import STTFactory
-from shared.config import config
+from shared.config import Config
 
 logger = logging.getLogger("Chat-Service.Core.Transcriber")
 
 
 class TranscriptionService:
-    def __init__(self, config_instance=config):
-        self.config = config_instance
+    def __init__(self, settings: Config):
+        self.config = settings
         self.stt_strategy = STTFactory.get_transcriber(self.config)
 
         # Safety guards

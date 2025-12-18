@@ -1,33 +1,31 @@
 import logging
-from rag_service.providers.retrieval import RetrievalFactory
-from shared.config import config
+from shared.config import Config
+from shared.interfaces import VectorStoreManager
 
-logger = logging.getLogger("RAG-SearchEngine")
+logger = logging.getLogger("RAG-Service.Components.SearchEngine")
 
 
 class SearchEngine:
-    def __init__(self, vector_store, config_instance=config):
+    def __init__(self, vector_store: VectorStoreManager, settings: Config):
         """
         :param vector_store: An initialized LangChain VectorStore (Pinecone, Chroma, etc.)
-        :param config_instance: Configuration settings
+        :param settings: Configuration settings
         """
         self.vector_store = vector_store
-        self.config = config_instance
+        self.config = settings
 
-        self.retriever = RetrievalFactory.get_retriever(self.vector_store, self.config)
         logger.info("Search Engine initialized successfully.")
 
-    def search(self, query: str, top_k: int = None): # type: ignore
+    def search(self, query: str, top_k: int = None):  # type: ignore
         """
         Executes the search using the configured strategy.
         :param top_k: Optional override for number of results to return.
         """
-        logger.info(
-            f"Searching for: '{query}' using strategy: {self.config.RETRIEVAL_STRATEGY}"
-        )
 
-        docs = self.retriever.invoke(query)
+        k = top_k if top_k else 4
+        logger.info(f"Executing search for query: '{query}' with top_k={k}")
 
+        docs = self.vector_store.similarity_search(query, k=k)
         if top_k:
             return docs[:top_k]
         return docs
@@ -36,16 +34,11 @@ class SearchEngine:
         """
         Deletes a vector from the store by doc_id.
         """
-        if hasattr(self.vector_store, "delete"):
-            try:
-                # Depending on the VectorStore implementation (Pinecone, Chroma, FAISS),
-                # the delete signature might vary.
-                self.vector_store.delete(filter={"doc_id": doc_id})
-                logger.info(f"Deleted vector: {doc_id}")
-                return True
-            except Exception as e:
-                logger.error(f"Error deleting vector {doc_id}: {e}")
-                return False
+        success = self.vector_store.delete_document(doc_id)
 
-        logger.warning("Vector store does not support deletion.")
-        return False
+        if success:
+            logger.info(f"Deleted vector: {doc_id}")
+        else:
+            logger.warning(f"Failed to delete vector (or not supported): {doc_id}")
+
+        return success

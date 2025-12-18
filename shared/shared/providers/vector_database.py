@@ -4,7 +4,8 @@ from typing import Any, Dict, Type
 from langchain_pinecone import PineconeVectorStore
 from langchain_community.vectorstores import FAISS
 from shared.config import Config, config as global_config
-from shared.interfaces import VectorDBStrategy
+from shared.interfaces import VectorDBStrategy, VectorStoreManager
+from typing import List
 
 logger = logging.getLogger("Shared.Providers.VectorDatabase")
 
@@ -17,6 +18,41 @@ def register_vector_db_strategy(name: str):
         return cls
     return decorator
 
+class PineconeAdapter(VectorStoreManager):
+    def __init__(self, store: PineconeVectorStore):
+        self.store = store
+
+    def add_documents(self, documents: List[Any]):
+        self.store.add_documents(documents)
+
+    def similarity_search(self, query: str, k: int) -> List[Any]:
+        return self.store.similarity_search(query, k=k)
+
+    def delete_document(self, doc_id: str) -> bool:
+        try:
+            self.store.delete(filter={"doc_id": doc_id})
+            return True
+        except Exception as e:
+            logger.error(f"Pinecone delete failed for {doc_id}: {e}")
+            return False
+
+class FAISSAdapter(VectorStoreManager):
+    def __init__(self, store: FAISS):
+        self.store = store
+
+    def add_documents(self, documents: List[Any]):
+        self.store.add_documents(documents)
+
+    def similarity_search(self, query: str, k: int) -> List[Any]:
+        return self.store.similarity_search(query, k=k)
+
+    def delete_document(self, doc_id: str) -> bool:
+        # FAISS Local often relies on internal IDs, not metadata.
+        # We normalize the behavior: instead of crashing or needing hasattr,
+        # we strictly return False to indicate "Not Supported/Failed" cleanly.
+        logger.warning(f"Delete operation not supported/implemented for FAISS Local adapter (doc_id: {doc_id})")
+        return False
+    
 @register_vector_db_strategy("pinecone")
 class PineconeStrategy(VectorDBStrategy):
     def create_vector_store(self, embeddings: Any, settings: Config) -> Any:

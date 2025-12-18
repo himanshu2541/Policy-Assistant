@@ -1,8 +1,8 @@
 import grpc
 import logging
 from concurrent import futures
-from chat_service.app.core.pipeline import RAGPipeline
-from shared.config import setup_logging, config
+from chat_service.app.core.pipeline import FlexiblePipeline
+from shared.config import setup_logging, config, Config
 from shared.protos import service_pb2, service_pb2_grpc
 
 from chat_service.app.core.transcriber import TranscriptionService
@@ -13,16 +13,16 @@ logger = logging.getLogger("Chat-Service.Main")
 
 
 class ChatService(service_pb2_grpc.ChatServiceServicer):
-    def __init__(self, pipeline: RAGPipeline, config_instance=config):
-        self.config = config_instance
-        self.transcriber = TranscriptionService()
+    def __init__(self, pipeline: FlexiblePipeline, settings: Config):
+        self.config = settings
+        self.transcriber = TranscriptionService(settings=self.config)
         self.pipeline = pipeline
 
     def Interact(self, request, context):
         """Standard Text Request"""
         logger.info(f"Text Query: {request.user_query}")
         try:
-            return self.pipeline.get_answer_unary(request.user_query)
+            return self.pipeline.run_unary(request.user_query)
         except Exception as e:
             logger.error(f"Interact Error: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
@@ -57,7 +57,7 @@ class ChatService(service_pb2_grpc.ChatServiceServicer):
                 return
 
             # 2. Handover to RAG Pipeline (Yields "thinking" and "answer" events)
-            yield from self.pipeline.get_answer_stream(final_text)
+            yield from self.pipeline.run_stream(final_text)
 
             # 3. Finish
             yield service_pb2.ChatStreamResponse(event_type="done")  # type: ignore
@@ -70,13 +70,10 @@ class ChatService(service_pb2_grpc.ChatServiceServicer):
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     pipeline = PipelineFactory.create(config)
-    service_pb2_grpc.add_ChatServiceServicer_to_server(ChatService(pipeline, config), server)
+    service_pb2_grpc.add_ChatServiceServicer_to_server(ChatService(pipeline, settings=config), server)
 
     port = config.CHAT_SERVICE_PORT
     server.add_insecure_port(f"[::]:{port}")
     logger.info(f"Chat Service started on port {port}")
     server.start()
     server.wait_for_termination()
-
-if __name__ == "__main__":
-    serve()

@@ -3,7 +3,7 @@ import logging
 from concurrent import futures
 
 from shared.protos import service_pb2, service_pb2_grpc
-from shared.config import config, setup_logging
+from shared.config import config, setup_logging, Config
 from llm_service.app.providers.chain import ChainProvider
 
 setup_logging()
@@ -11,8 +11,8 @@ logger = logging.getLogger("LLM-Service")
 
 
 class LLMService(service_pb2_grpc.LLMServiceServicer):
-    def __init__(self, chain_provider: ChainProvider, config_instance=config):
-        self.config = config_instance
+    def __init__(self, chain_provider: ChainProvider, settings: Config):
+        self.config = settings
         self.chain_provider = chain_provider
         logger.info("LLM Service initialized with dependencies")
 
@@ -80,7 +80,7 @@ def serve():
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
-    service = LLMService(chain_provider=chain_provider)
+    service = LLMService(chain_provider=chain_provider, settings=config)
 
     service_pb2_grpc.add_LLMServiceServicer_to_server(service, server)
 

@@ -1,7 +1,7 @@
 import logging
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import Runnable
-from shared.config import config
+from shared.config import Config
 from shared.providers.llm import LLMFactory
 from llm_service.app.providers.chain_strategies import ChainBuilderFactory
 
@@ -13,8 +13,8 @@ class ChainProvider:
     Manages the creation of generation chains using the Strategy Pattern.
     """
 
-    def __init__(self, config_instance=config):
-        self.config = config_instance
+    def __init__(self, settings: Config):
+        self.config = settings
         # Initialize Infrastructure (LLM & Parser)
         self.llm = LLMFactory.get_llm(self.config)
         self.output_parser = StrOutputParser()

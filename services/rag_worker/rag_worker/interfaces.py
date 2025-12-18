@@ -11,3 +11,12 @@ class SplitterStrategy(ABC):
     @abstractmethod
     def split_text(self, text: str) -> List[str]:
         pass
+
+class JobStatusReporter(ABC):
+    @abstractmethod
+    async def report_success(self, doc_id: str, filename: str, chunk_count: int):
+        pass
+
+    @abstractmethod
+    async def report_failure(self, doc_id: str, filename: str, error_message: str):
+        pass

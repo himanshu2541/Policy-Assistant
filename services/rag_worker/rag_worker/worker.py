@@ -12,6 +12,7 @@ from shared.providers.redis import RedisFactory
 from rag_worker.providers.processors import ProcessorFactory
 
 from rag_worker.services.ingestion import IngestionService
+from rag_worker.services.reporting import RedisJobStatusReporter
 
 setup_logging()
 logger = logging.getLogger("RAG-Worker.Worker")
@@ -27,7 +28,8 @@ async def main():
     vector_store = VectorDBFactory.get_vector_store(embeddings, config)
 
     # Initialize Ingestion Service
-    ingestion_service = IngestionService(vector_store, redis_client)
+    status_reporter = RedisJobStatusReporter(redis_client)
+    ingestion_service = IngestionService(vector_store, status_reporter)
 
     logger.info("Waiting for jobs...")
 
@@ -45,12 +47,15 @@ async def main():
                 processor = ProcessorFactory.get_processor(file_path)
                 if not processor:
                     logger.error(f"Unsupported file format: {file_path}")
+                    # Ideally, report failure here too, but skipping for now to match flow
                     continue
 
                 raw_text = processor.process(file_path) or ""
                 logger.info(f"Extracted {len(raw_text)} characters from {doc_id}")
 
-                await ingestion_service.ingest(doc_id, raw_text)
+                filename = os.path.basename(file_path) if file_path else "Unknown"
+                await ingestion_service.ingest(doc_id, raw_text, filename=filename)
+                
                 logger.info(f"Completed processing for: {doc_id}")
     except Exception as e:
         logger.error(f"Worker Loop encountered an error: {e}")

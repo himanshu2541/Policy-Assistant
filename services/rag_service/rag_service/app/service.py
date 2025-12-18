@@ -1,26 +1,28 @@
 import time
 import json
 import logging
-from redis import Redis
+
 from shared.protos import service_pb2, service_pb2_grpc
-from shared.config import config
+from shared.config import Config
+
 from rag_service.components.search_engine import SearchEngine
 from rag_service.core.dependencies import get_vector_store
 
-logger = logging.getLogger("RAG-Service")
+from shared.providers.redis import RedisFactory
+
+logger = logging.getLogger("RAG-Service.App.Service")
 
 
 class RAGService(service_pb2_grpc.RAGServiceServicer):
-    def __init__(self, config_instance=config):
-        self.config = config_instance
+    def __init__(self, settings: Config):
+        self.config = settings
         logger.info("Initializing RAG Service components")
 
-        # Redis for Sync Jobs
-        self.redis: Redis = Redis.from_url(self.config.REDIS_URL, decode_responses=True)
+        self.redis = RedisFactory.get_client(self.config)
 
+        vector_store_adapter = get_vector_store()
         # Search Engine for Retrieval
-        vector_store_conn = get_vector_store()
-        self.search_engine = SearchEngine(vector_store_conn)
+        self.search_engine = SearchEngine(vector_store_adapter, self.config)
 
     def RetrieveContext(self, request, context):
         try:
@@ -68,7 +70,7 @@ class RAGService(service_pb2_grpc.RAGServiceServicer):
             raw_data = self.redis.hgetall("rag_documents")
 
             docs = []
-            for doc_id, json_str in raw_data.items(): # type: ignore
+            for doc_id, json_str in raw_data.items():  # type: ignore
                 data = json.loads(json_str)
                 docs.append(
                     service_pb2.DocumentMetadata(  # type: ignore

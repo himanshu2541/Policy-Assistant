@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from shared.config import Config
-from typing import List, Tuple, Any, Generator
+from typing import Dict, List, Tuple, Any, Generator
+
+from shared.protos import service_pb2
 
 class STTStrategy(ABC):
     @abstractmethod
@@ -29,4 +31,17 @@ class AnswerGenerator(ABC):
     @abstractmethod
     def stream_response(self, query: str, context: str) -> Generator[str, None, None]:
         """Yields text tokens."""
+        pass
+
+class PipelineStep(ABC):
+    """
+    Represents a single step in the RAG processing chain.
+    """
+    @abstractmethod
+    def execute(self, context: Dict[str, Any]) -> Generator[service_pb2.ChatStreamResponse, None, None]: # type: ignore
+        """
+        Executes the step logic.
+        :param context: A shared dictionary to pass data (like retrieved chunks) between steps.
+        :yields: ChatStreamResponse events (thinking, context, answer, etc.)
+        """
         pass
