@@ -1,24 +1,17 @@
 import logging
 from functools import lru_cache
 
+from shared.providers.embeddings import EmbeddingFactory
+from shared.providers.vector_database import VectorDBFactory
 from shared.config import config
-from shared.providers.embeddings import EmbeddingsProvider
-from shared.providers.vector_database import VectorDatabase
 
-logger = logging.getLogger("RAG-Core")
+logger = logging.getLogger("RAG-Service.Core.Dependencies")
 
 @lru_cache()
 def get_embedding_model():
-    """Singleton Embedding Model"""
-    logger.info("Loading Embedding Model...")
-    return EmbeddingsProvider(config).get_embeddings()
+    return EmbeddingFactory.get_embeddings(config)
 
 @lru_cache()
 def get_vector_store():
-    """
-    Singleton connection to the Vector Database.
-    This handles the actual connection logic.
-    """
-    logger.info("Connecting to Vector Database...")
     embeddings = get_embedding_model()
-    return VectorDatabase(embeddings, config).get_store()
+    return VectorDBFactory.get_vector_store(embeddings, config)

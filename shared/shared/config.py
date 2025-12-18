@@ -25,16 +25,19 @@ class Config(BaseSettings):
 
     EMBEDDING_PROVIDER: str = "local"
     EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
-
+    RAG_TOP_K: int = 5
+    
     # Options: "openai" or "local" (for LM Studio/Ollama)
     LLM_PROVIDER: str = "local"
     LLM_MODEL: str = "phi-3-mini-4k-instruct"
     LLM_BASE_URL: str = "http://localhost:1234/v1"
     LLM_TEMPERATURE: float = 0.8
 
+    VECTOR_DB_PROVIDER: str = "pinecone"
     PINECONE_API_KEY: str = ""
     PINECONE_INDEX_NAME: str = ""
 
+    STT_PROVIDER: str = "local"  # "local" or "openai"
     STT_MODEL_SIZE: str = "small"
     STT_DEVICE: str = "cpu"
     STT_COMPUTE_TYPE: str = "int8"

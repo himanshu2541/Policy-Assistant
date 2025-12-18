@@ -5,7 +5,7 @@ from shared.config import setup_logging, config
 from shared.protos import service_pb2, service_pb2_grpc
 
 from chat_service.app.core.transcriber import TranscriptionService
-from chat_service.app.core.pipeline import RAGPipeline
+from chat_service.app.providers.pipeline import PipelineFactory
 
 setup_logging()
 logger = logging.getLogger("Chat-Service.Main")
@@ -15,7 +15,7 @@ class ChatService(service_pb2_grpc.ChatServiceServicer):
     def __init__(self, config_instance=config):
         self.config = config_instance
         self.transcriber = TranscriptionService()
-        self.pipeline = RAGPipeline(self.config)
+        self.pipeline = PipelineFactory.create(self.config)
 
     def Interact(self, request, context):
         """Standard Text Request"""

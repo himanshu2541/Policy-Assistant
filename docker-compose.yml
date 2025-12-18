@@ -1,7 +1,4 @@
 services:
-  # ==========================================
-  # 1. API GATEWAY (Entry Point)
-  # ==========================================
   api_gateway:
     build:
       context: .
@@ -11,18 +8,20 @@ services:
       - "8000:8000"
     env_file: .env
     environment:
-      - SHARED_FOLDER_PATH=/data
+      - UPLOAD_DIR=/data/uploads
       - RAG_SERVICE_HOST=rag_service
       - CHAT_SERVICE_HOST=chat_service
+      - LLM_SERVICE_HOST=llm_service
+      - REDIS_URL=redis://redis_queue:6379/0
+      - PYTHONPATH=/app
     volumes:
-      - policy_uploads:/data # Shared volume for file uploads
+      - policy_uploads:/data # Persist uploads
+    command: python -m api_gateway.cli
+    restart: unless-stopped
     depends_on:
       - chat_service
       - rag_service
-
-  # ==========================================
-  # 2. CHAT SERVICE (Orchestrator)
-  # ==========================================
+      - redis_queue
   chat_service:
     build:
       context: .
@@ -34,68 +33,75 @@ services:
     environment:
       - RAG_SERVICE_HOST=rag_service
       - LLM_SERVICE_HOST=llm_service
+      - PYTHONPATH=/app
+    command: python -m chat_service.cli
+    restart: unless-stopped
     depends_on:
       - rag_service
       - llm_service
 
-  # ==========================================
-  # 3. RAG SERVICE (Retrieval & Search)
-  # ==========================================
   rag_service:
     build:
       context: .
       dockerfile: services/rag_service/Dockerfile
     container_name: rag_service
     ports:
-      - "50052:50052" # gRPC Port
+      - "50052:50052"
     env_file: .env
     environment:
       - REDIS_URL=redis://redis_queue:6379/0
+      - CHAT_SERVICE_HOST=chat_service
+      - LLM_SERVICE_HOST=llm_service
+      - PYTHONPATH=/app
+    command: python -m rag_service.cli
+    restart: unless-stopped
     depends_on:
       - redis_queue
 
-  # ==========================================
-  # 4. RAG WORKER (Background Ingestion)
-  # ==========================================
   rag_worker:
     build:
       context: .
       dockerfile: services/rag_worker/Dockerfile
     container_name: rag_worker
-    # No ports needed (It's a background consumer)
+    # No ports needed (Background consumer)
     env_file: .env
     environment:
       - REDIS_URL=redis://redis_queue:6379/0
-      - SHARED_FOLDER_PATH=/data
+      - UPLOAD_DIR=/data/uploads
+      - RAG_SERVICE_HOST=rag_service
+      - CHAT_SERVICE_HOST=chat_service
+      - LLM_SERVICE_HOST=llm_service
+      - PYTHONPATH=/app
     volumes:
-      - policy_uploads:/data # Read access to uploaded files
+      - policy_uploads:/data # Read access to uploads
+    command: python -m rag_worker.cli
+    restart: unless-stopped
     depends_on:
       - redis_queue
-
-  # ==========================================
-  # 5. LLM SERVICE (Inference Engine)
-  # ==========================================
   llm_service:
     build:
       context: .
       dockerfile: services/llm_service/Dockerfile
     container_name: llm_service
     ports:
-      - "50053:50053" # gRPC Port
+      - "50053:50053"
     env_file: .env
-    # Crucial for LM Studio / Local LLM support:
-    # Allows container to access 'localhost' of your machine
+    environment:
+      - PYTHONPATH=/app
+      - LLM_BASE_URL=http://host.docker.internal:1234/v1
+      - CHAT_SERVICE_HOST=chat_service
+      - RAG_SERVICE_HOST=rag_service
+    # Essential for connecting to local LLMs (e.g., LM Studio/Ollama) on the host
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-  # ==========================================
-  # INFRASTRUCTURE
-  # ==========================================
+    command: python -m llm_service.cli
+    restart: unless-stopped
   redis_queue:
     image: redis:alpine
     container_name: redis_queue
     ports:
       - "6379:6379"
+    restart: unless-stopped
 
 volumes:
   policy_uploads:

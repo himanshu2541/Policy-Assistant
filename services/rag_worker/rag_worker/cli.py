@@ -1,5 +1,5 @@
 import sys
-import os
+import asyncio
 
 from shared.config import config
 from rag_worker.worker import main as start_worker
@@ -20,7 +20,9 @@ def run():
     logger.info(f"Listening to Queue: rag_jobs")
 
     try:
-        start_worker()
+        asyncio.run(start_worker())
+    except asyncio.CancelledError:
+        logger.info("RAG Worker Cancelled. Shutting down...")
     except KeyboardInterrupt:
         logger.info("RAG Worker stopped manually.")
     except Exception as e:

@@ -9,65 +9,75 @@ from llm_service.app.providers.chain import ChainProvider
 setup_logging()
 logger = logging.getLogger("LLM-Service")
 
+
 class LLMService(service_pb2_grpc.LLMServiceServicer):
-    def __init__(self, config_instance=config):
+    def __init__(self, chain_provider: ChainProvider, config_instance=config):
         self.config = config_instance
-        logger.info("Initializing LLM Service components")
-        self.chain_provider = ChainProvider(self.config)
-        logger.info("Chain provider initialized")
+        self.chain_provider = chain_provider
+        logger.info("LLM Service initialized with dependencies")
 
     def GenerateResponse(self, request, context):
         try:
             logger.info(f"Generating response for: {request.user_query[:20]}...")
-            
+
             # 1. Get the Chain
             chain = self.chain_provider.create_chain(request.system_prompt)
             logger.info("Chain created for generation")
-            
+
             # 2. Run the Chain
             # We map the gRPC request fields to the Prompt variables
-            result_text = chain.invoke({
-                "context": request.context,
-                "input": request.user_query
-            })
+            result_text = chain.invoke(
+                {"context": request.context, "input": request.user_query}
+            )
             logger.info("Chain invoked successfully")
-            
-            return service_pb2.LLMResponse(text=result_text) # type: ignore
+
+            return service_pb2.LLMResponse(text=result_text)  # type: ignore
 
         except Exception as e:
             logger.error(f"Error: {e}")
+            print(f"Error: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
-            return service_pb2.LLMResponse() # type: ignore
+            return service_pb2.LLMResponse()  # type: ignore
 
     def StreamResponse(self, request, context):
         try:
             logger.info(f"Streaming response for: {request.user_query[:20]}...")
-            
+
             # 1. Get the Chain
             chain = self.chain_provider.create_chain(request.system_prompt)
             logger.info("Chain created for streaming")
-            
+
             # 2. Stream the Chain
             logger.info("Starting token streaming")
-            for token in chain.stream({
-                "context": request.context,
-                "input": request.user_query
-            }):
-                yield service_pb2.LLMResponse(text=token) # type: ignore
-                
+            for token in chain.stream(
+                {"context": request.context, "input": request.user_query}
+            ):
+                yield service_pb2.LLMResponse(text=token)  # type: ignore
+
         except Exception as e:
             logger.error(f"Stream Error: {e}")
+            print(f"Stream Error: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
 
+
 def serve():
+    logger.info("Initializing dependencies...")
+    chain_provider = ChainProvider(config)
+
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    service_pb2_grpc.add_LLMServiceServicer_to_server(LLMService(), server)
+
+    service = LLMService(chain_provider=chain_provider)
+
+    service_pb2_grpc.add_LLMServiceServicer_to_server(service, server)
+
     port = config.LLM_SERVICE_PORT
-    server.add_insecure_port(f'[::]:{port}')
+    server.add_insecure_port(f"[::]:{port}")
     logger.info(f"LLM Service started on port {port}")
+
     server.start()
     server.wait_for_termination()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     serve()

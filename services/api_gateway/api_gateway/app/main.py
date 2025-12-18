@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-
 from api_gateway.app.routes import chat, upload, admin
 
-import logging
+from shared.providers.redis import RedisFactory
 from shared.config import setup_logging
+
+import logging
 setup_logging()
 logger = logging.getLogger("API-Gateway.Main")
 
@@ -13,9 +14,10 @@ logger = logging.getLogger("API-Gateway.Main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up API Gateway...")
+    RedisFactory.get_client()  # Initialize Redis connection pool
     yield
     logger.info("Shutting down API Gateway...")
-
+    await RedisFactory.close()
 
 app = FastAPI(
     title="Policy Assistant API Gateway",
@@ -35,6 +37,7 @@ app.add_middleware(
 app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])
 app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
+
 
 @app.get("/", tags=["Root"])
 async def root():

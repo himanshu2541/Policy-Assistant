@@ -1,29 +1,30 @@
 import logging
-from redis import asyncio as aioredis
+from shared.interfaces import StorageProvider
+from shared.providers.storage import LocalStorageProvider
+from shared.providers.redis import RedisFactory
 from shared.config import config
 
-logger = logging.getLogger("API-Gateway")
-
-_redis_pool = None
+logger = logging.getLogger("API-Gateway.Core.Dependencies")
 
 async def get_redis_connection():
     """
     Dependency that yields a Redis connection from the pool.
     Usage: redis = Depends(get_redis_connection)
     """
-    global _redis_pool
-    if _redis_pool is None:
-        logger.info("Initializing Async Redis Pool...")
-        _redis_pool = aioredis.from_url(
-            config.REDIS_URL, 
-            decode_responses=True,
-            max_connections=10
-        )
-    
-    # Yield a client from the pool
-    async with _redis_pool.client() as client:
-        yield client
+    client = RedisFactory.get_client(config)
+    yield client
 
 async def get_redis_pubsub():
-    """Helper to get a raw connection for PubSub (cannot use pool context)"""
-    return aioredis.from_url(config.REDIS_URL, decode_responses=True)
+    """Helper to get a raw connection for PubSub"""
+    return RedisFactory.get_client(config)
+
+def get_storage_service() -> StorageProvider:
+    """
+    Returns the configured StorageProvider.
+    To switch to change the logic here.
+    """
+    # Example logic for future switching:
+    # if config.STORAGE_TYPE == "s3":
+    #     return S3StorageProvider(bucket=config.S3_BUCKET)
+
+    return LocalStorageProvider(upload_dir=config.UPLOAD_DIR)

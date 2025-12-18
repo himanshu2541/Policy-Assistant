@@ -5,7 +5,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from shared.config import config
 
-logger = logging.getLogger("rag_worker.services.ingestion")
+logger = logging.getLogger("RAG-Worker.Services.Ingestion")
 
 
 class IngestionService:
@@ -19,10 +19,10 @@ class IngestionService:
             length_function=len,
         )
 
-    def ingest(self, doc_id: str, raw_text: str, filename: str = "Unknown"):
+    async def ingest(self, doc_id: str, raw_text: str, filename: str = "Unknown"):
         if not raw_text:
             logger.warning(f"No text extracted for document {doc_id}")
-            self._publish_update(doc_id, "failed", "No text extracted from document.")
+            await self._publish_update(doc_id, "failed", "No text extracted from document.")
             return
         try:
             chunks = self.splitter.split_text(raw_text)
@@ -42,9 +42,9 @@ class IngestionService:
                     "status": "synced",
                     "timestamp": datetime.now().isoformat(),
                 }
-                self.redis_client.hset("rag_documents", doc_id, json.dumps(metadata))
+                await self.redis_client.hset("rag_documents", doc_id, json.dumps(metadata))
                 logger.info(f"Indexed {len(documents)} chunks for {doc_id}")
-                self._publish_update(doc_id, "completed", "File synced successfully.")
+                await self._publish_update(doc_id, "completed", "File synced successfully.")
         except Exception as e:
             metadata = {
                 "doc_id": doc_id,
@@ -52,12 +52,12 @@ class IngestionService:
                 "status": "error",
                 "timestamp": datetime.now().isoformat(),
             }
-            self.redis_client.hset("rag_documents", doc_id, json.dumps(metadata))
+            await self.redis_client.hset("rag_documents", doc_id, json.dumps(metadata))
             logger.error(f"Failed to ingest document {doc_id}: {e}")
-            self._publish_update(doc_id, "failed", str(e))
+            await self._publish_update(doc_id, "failed", str(e))
 
-    def _publish_update(self, doc_id, status, msg):
+    async def _publish_update(self, doc_id, status, msg):
         payload = json.dumps(
             {"type": "job_update", "doc_id": doc_id, "status": status, "message": msg}
         )
-        self.redis_client.publish("job_updates", payload)
+        await self.redis_client.publish("job_updates", payload)

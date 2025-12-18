@@ -1,44 +1,33 @@
-import logging
+from typing import Any
 from langchain_openai import OpenAIEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_core.embeddings import Embeddings
+from shared.config import Config, config as global_config
+from shared.interfaces import EmbeddingStrategy
 
-from shared.config import config
+class OpenAIEmbeddingStrategy(EmbeddingStrategy):
+    def create_embedding_model(self, settings: Config) -> Any:
+        return OpenAIEmbeddings(
+            api_key=lambda: settings.OPENAI_API_KEY
+        )
 
-logger = logging.getLogger("shared.providers.embeddings")
+class LocalEmbeddingStrategy(EmbeddingStrategy):
+    def create_embedding_model(self, settings: Config) -> Any:
+        # Uses standard HuggingFace SentenceTransformers
+        return HuggingFaceEmbeddings(
+            model_name=settings.EMBEDDING_MODEL_NAME
+        )
 
+class EmbeddingFactory:
+    _strategies = {
+        "openai": OpenAIEmbeddingStrategy(),
+        "local": LocalEmbeddingStrategy()
+    }
 
-class EmbeddingsProvider:
-    """
-    Provides methods to initialize and retrieve embedding models.
-    """
-
-    def __init__(self, config_instance=config):
-        self.config = config_instance
-        self.embeddings = self._get_embeddings()
-
-    def _get_embeddings(self) -> Embeddings:
-        provider = self.config.EMBEDDING_PROVIDER.lower()
-
-        try:
-            if provider == "openai":
-                return OpenAIEmbeddings(
-                    model=self.config.EMBEDDING_MODEL_NAME,
-                    api_key=lambda: self.config.OPENAI_API_KEY,  # Pass value directly if not using callable
-                )
-            elif provider == "local":
-                return HuggingFaceEmbeddings(
-                    model_name=self.config.EMBEDDING_MODEL_NAME,
-                    model_kwargs={"device": "cpu"},
-                )
-            else:
-                raise ValueError(f"Unknown embedding provider: {provider}")
-
-        except Exception as e:
-            logger.error(
-                f"Failed to initialize embedding model (provider: {provider}): {e}"
-            )
-            raise
-
-    def get_embeddings(self) -> Embeddings:
-        return self.embeddings
+    @classmethod
+    def get_embeddings(cls, settings: Config = global_config) -> Any:
+        provider = settings.EMBEDDING_PROVIDER.lower()
+        strategy = cls._strategies.get(provider)
+        if not strategy:
+            raise ValueError(f"Unknown Embedding Provider: {provider}")
+        
+        return strategy.create_embedding_model(settings)

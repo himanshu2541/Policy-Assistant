@@ -4,15 +4,16 @@ import tempfile
 import logging
 from typing import Iterable
 from shared.protos import service_pb2
-from chat_service.app.providers.stt import STTProvider
+from chat_service.app.providers.stt import STTFactory
+from shared.config import config
 
 logger = logging.getLogger("Chat-Service.Core.Transcriber")
 
 
 class TranscriptionService:
-    def __init__(self):
-        self.stt = STTProvider()
-        self.model = self.stt.get_instance()
+    def __init__(self, config_instance=config):
+        self.config = config_instance
+        self.stt_strategy = STTFactory.get_transcriber(self.config)
 
         # Safety guards
         self.MIN_BYTES = 4000  # ~15 sec at 32kbps; below this is likely noise/silence
@@ -69,29 +70,8 @@ class TranscriptionService:
             return ""
 
         try:
-            with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_file:
-                temp_filename = temp_file.name
-                temp_file.write(audio_data)
-                temp_file.flush()
-
-            segments, info = self.model.transcribe(
-                temp_filename,
-                beam_size=5,  # higher beam size for better accuracy
-                best_of=5,  # higher best_of for better accuracy
-            )
-            logger.info(
-                f"Detected language '{info.language}' with probability {info.language_probability}"
-            )
-
-            texts = [s.text for s in segments]
-            return " ".join(texts).strip()
+            return self.stt_strategy.transcribe(bytes(audio_data), self.config)
 
         except Exception as e:
-            print(f"[STT] Error in full transcription ({temp_filename}): {e}")
+            logger.error(f"[STT] Error in full transcription: {e}")
             return ""
-        finally:
-            if temp_filename and os.path.exists(temp_filename):
-                try:
-                    os.remove(temp_filename)
-                except Exception:
-                    pass

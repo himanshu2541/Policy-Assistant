@@ -2,15 +2,16 @@ import json
 import time
 import logging
 import os
-from redis import Redis
 
 # Shared Providers
 from shared.config import config, setup_logging
-from shared.providers.embeddings import EmbeddingsProvider
-from shared.providers.vector_database import VectorDatabase
+from shared.providers.embeddings import EmbeddingFactory
+from shared.providers.vector_database import VectorDBFactory
+from shared.providers.redis import RedisFactory
 
 from rag_worker.processors.pdf_processor import PdfProcessor
 from rag_worker.processors.text_processor import TextProcessor
+
 from rag_worker.services.ingestion import IngestionService
 
 setup_logging()
@@ -30,23 +31,23 @@ def get_processor(file_path: str):
         return None
 
 
-def main():
+async def main():
     logger.info("Starting RAG Worker...")
 
-    redis_client = Redis.from_url(config.REDIS_URL, decode_responses=True)
+    redis_client = RedisFactory.get_client(config)
 
     # Initialize Providers
     logger.info("Loading Embeddings...")
-    embeddings = EmbeddingsProvider(config).get_embeddings()
-    vector_store = VectorDatabase(embeddings, config).get_store()
+    embeddings = EmbeddingFactory.get_embeddings(config)
+    vector_store = VectorDBFactory.get_vector_store(embeddings, config)
 
     # Initialize Ingestion Service
     ingestion_service = IngestionService(vector_store, redis_client)
 
     logger.info("Waiting for jobs...")
 
-    while True:
-        try:
+    try:
+        while True:
             result = redis_client.brpop(["rag_jobs"], timeout=1)
             if result:
                 _, job_data_str = result  # type: ignore
@@ -64,12 +65,11 @@ def main():
                 raw_text = processor.process(file_path) or ""
                 logger.info(f"Extracted {len(raw_text)} characters from {doc_id}")
 
-                ingestion_service.ingest(doc_id, raw_text)
+                await ingestion_service.ingest(doc_id, raw_text)
                 logger.info(f"Completed processing for: {doc_id}")
-        except Exception as e:
-            logger.error(f"Worker Loop Error: {e}")
-            time.sleep(1)
-
-
-if __name__ == "__main__":
-    main()
+    except Exception as e:
+        logger.error(f"Worker Loop encountered an error: {e}")
+        time.sleep(1) 
+    finally:
+        logger.info("Closing Redis connection...")
+        await RedisFactory.close()

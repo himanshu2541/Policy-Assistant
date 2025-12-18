@@ -4,21 +4,18 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import Runnable
 from shared.config import config
 
-from shared.providers.llm import LLMProvider
+from shared.providers.llm import LLMFactory
 
-logger = logging.getLogger(__name__)
-
+logger = logging.getLogger("LLM-Service.Providers.Chain")
 
 class ChainProvider:
     """
     Manages the creation of the generation chain (Prompt -> LLM -> Parser).
-    Replaces the old 'ChainProvider' but without the retrieval component.
     """
 
     def __init__(self, config_instance=config):
         self.config = config_instance
-        # Initialize the LLM once (OpenAI or Local)
-        self.llm = LLMProvider(self.config).get_llm()
+        self.llm = LLMFactory.get_llm(self.config)
         self.output_parser = StrOutputParser()
 
     def create_chain(self, system_prompt: str = "") -> Runnable:
