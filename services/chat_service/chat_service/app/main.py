@@ -1,6 +1,7 @@
 import grpc
 import logging
 from concurrent import futures
+from chat_service.app.core.pipeline import RAGPipeline
 from shared.config import setup_logging, config
 from shared.protos import service_pb2, service_pb2_grpc
 
@@ -12,10 +13,10 @@ logger = logging.getLogger("Chat-Service.Main")
 
 
 class ChatService(service_pb2_grpc.ChatServiceServicer):
-    def __init__(self, config_instance=config):
+    def __init__(self, pipeline: RAGPipeline, config_instance=config):
         self.config = config_instance
         self.transcriber = TranscriptionService()
-        self.pipeline = PipelineFactory.create(self.config)
+        self.pipeline = pipeline
 
     def Interact(self, request, context):
         """Standard Text Request"""
@@ -68,7 +69,8 @@ class ChatService(service_pb2_grpc.ChatServiceServicer):
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    service_pb2_grpc.add_ChatServiceServicer_to_server(ChatService(config), server)
+    pipeline = PipelineFactory.create(config)
+    service_pb2_grpc.add_ChatServiceServicer_to_server(ChatService(pipeline, config), server)
 
     port = config.CHAT_SERVICE_PORT
     server.add_insecure_port(f"[::]:{port}")

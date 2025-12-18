@@ -1,7 +1,7 @@
 import logging
 import sys
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
+from typing import List
 
 class Config(BaseSettings):
     OPENAI_API_KEY: str = ""
@@ -26,7 +26,13 @@ class Config(BaseSettings):
     EMBEDDING_PROVIDER: str = "local"
     EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
     RAG_TOP_K: int = 5
-    
+
+    # Retrieval Strategy Configuration
+    # Options: "ensemble", "dense", "mmr"
+    RETRIEVAL_STRATEGY: str = "ensemble"
+    # New: Weights for Ensemble [Dense, MMR]
+    RETRIEVAL_WEIGHTS: List[float] = [0.6, 0.4]
+
     # Options: "openai" or "local" (for LM Studio/Ollama)
     LLM_PROVIDER: str = "local"
     LLM_MODEL: str = "phi-3-mini-4k-instruct"

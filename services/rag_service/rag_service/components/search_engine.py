@@ -1,46 +1,51 @@
 import logging
-from langchain_classic.retrievers import EnsembleRetriever
+from rag_service.providers.retrieval import RetrievalFactory
+from shared.config import config
 
 logger = logging.getLogger("RAG-SearchEngine")
 
+
 class SearchEngine:
-    def __init__(self, vector_store):
+    def __init__(self, vector_store, config_instance=config):
         """
         :param vector_store: An initialized LangChain VectorStore (Pinecone, Chroma, etc.)
+        :param config_instance: Configuration settings
         """
         self.vector_store = vector_store
-        self._initialize_retrievers()
+        self.config = config_instance
 
-    def _initialize_retrievers(self):
-        logger.info("Initializing Search Engine Strategy...")
+        self.retriever = RetrievalFactory.get_retriever(self.vector_store, self.config)
+        logger.info("Search Engine initialized successfully.")
 
-        # RETRIEVER 1: Dense Similarity
-        self.dense_retriever = self.vector_store.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": 5}
+    def search(self, query: str, top_k: int = None): # type: ignore
+        """
+        Executes the search using the configured strategy.
+        :param top_k: Optional override for number of results to return.
+        """
+        logger.info(
+            f"Searching for: '{query}' using strategy: {self.config.RETRIEVAL_STRATEGY}"
         )
 
-        # RETRIEVER 2: MMR (Maximal Marginal Relevance)
-        self.mmr_retriever = self.vector_store.as_retriever(
-            search_type="mmr",
-            search_kwargs={"k": 5, "fetch_k": 20, "lambda_mult": 0.5}
-        )
+        docs = self.retriever.invoke(query)
 
-        # ENSEMBLE RETRIEVER 
-        self.ensemble_retriever = EnsembleRetriever(
-            retrievers=[self.dense_retriever, self.mmr_retriever],
-            weights=[0.6, 0.4]
-        )
-        logger.info("Ensemble Retriever initialized (Similarity + MMR)")
-
-    def search(self, query: str, top_k: int = 5):
-        logger.info(f"Ensemble search for: '{query}'")
-        docs = self.ensemble_retriever.invoke(query)
-        return docs[:top_k]
+        if top_k:
+            return docs[:top_k]
+        return docs
 
     def delete_vector(self, doc_id: str) -> bool:
-        if hasattr(self.vector_store, 'delete'):
-            # TODO: Verification of delete filter syntax
-            self.vector_store.delete(filter={"doc_id": doc_id})
-            return True
+        """
+        Deletes a vector from the store by doc_id.
+        """
+        if hasattr(self.vector_store, "delete"):
+            try:
+                # Depending on the VectorStore implementation (Pinecone, Chroma, FAISS),
+                # the delete signature might vary.
+                self.vector_store.delete(filter={"doc_id": doc_id})
+                logger.info(f"Deleted vector: {doc_id}")
+                return True
+            except Exception as e:
+                logger.error(f"Error deleting vector {doc_id}: {e}")
+                return False
+
+        logger.warning("Vector store does not support deletion.")
         return False
