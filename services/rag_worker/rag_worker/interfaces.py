@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+from shared.config import Config
+
 class BaseFileProcessor(ABC):
     @abstractmethod
     def process(self, file_path: str) -> str | None:
@@ -8,6 +10,9 @@ class BaseFileProcessor(ABC):
         pass
 
 class SplitterStrategy(ABC):
+    @abstractmethod
+    def __init__(self, settings: Config):
+        pass
     @abstractmethod
     def split_text(self, text: str) -> List[str]:
         pass

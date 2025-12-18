@@ -24,6 +24,14 @@ class TranscriptionService:
         """
         audio_buffer = bytearray()
 
+        logger.info("Starting Audio Stream Processing...")
+        count = 0
+        for chunk in request_iterator:
+            count += 1
+            # Log the first few chunks to verify data is arriving
+            if count < 5:
+                logger.info(f"Received chunk {count}: {len(chunk.content)} bytes")
+
         for chunk in request_iterator:
             if not getattr(chunk, "content", None):
                 continue

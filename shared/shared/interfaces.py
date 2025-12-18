@@ -67,3 +67,11 @@ class VectorStoreManager(ABC):
     def similarity_search(self, query: str, k: int) -> List[Any]:
         """Performs a similarity search."""
         pass
+
+    @abstractmethod
+    def as_langchain_retriever(self, search_type: str, search_kwargs: dict) -> Any:
+        """
+        Returns a LangChain-compatible retriever object.
+        Required for strategies that rely on internal LangChain logic (like Ensemble).
+        """
+        pass

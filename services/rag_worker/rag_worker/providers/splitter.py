@@ -62,4 +62,4 @@ class TextSplitterFactory:
             )
 
         logger.info(f"Initializing Text Splitter Strategy: {provider}")
-        return strategy_cls()
+        return strategy_cls(settings)

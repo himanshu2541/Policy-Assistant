@@ -3,8 +3,8 @@ from typing import Dict, Type, Any
 from langchain_core.retrievers import BaseRetriever
 from langchain_classic.retrievers import EnsembleRetriever
 from shared.config import Config, config as global_config
-
 from rag_service.interfaces import RetrievalStrategy
+from shared.interfaces import VectorStoreManager
 
 logger = logging.getLogger("RAG-Service.Providers.Retrieval")
 
@@ -23,9 +23,9 @@ class DenseRetrievalStrategy(RetrievalStrategy):
     """
     Uses standard semantic similarity search.
     """
-    def build_retriever(self, vector_store: Any, settings: Config) -> BaseRetriever:
+    def build_retriever(self, vector_store: VectorStoreManager, settings: Config) -> BaseRetriever:
         logger.info(f"Building Dense Retriever (k={settings.RAG_TOP_K})")
-        return vector_store.as_retriever(
+        return vector_store.as_langchain_retriever(
             search_type="similarity",
             search_kwargs={"k": settings.RAG_TOP_K}
         )
@@ -35,9 +35,9 @@ class MMRRetrievalStrategy(RetrievalStrategy):
     """
     Uses Maximal Marginal Relevance to diversify results.
     """
-    def build_retriever(self, vector_store: Any, settings: Config) -> BaseRetriever:
+    def build_retriever(self, vector_store: VectorStoreManager, settings: Config) -> BaseRetriever:
         logger.info(f"Building MMR Retriever (k={settings.RAG_TOP_K})")
-        return vector_store.as_retriever(
+        return vector_store.as_langchain_retriever(
             search_type="mmr",
             search_kwargs={
                 "k": settings.RAG_TOP_K,
@@ -51,15 +51,15 @@ class EnsembleRetrievalStrategy(RetrievalStrategy):
     """
     Combines Dense and MMR results using weighted rank fusion.
     """
-    def build_retriever(self, vector_store: Any, settings: Config) -> BaseRetriever:
+    def build_retriever(self, vector_store: VectorStoreManager, settings: Config) -> BaseRetriever:
         weights = settings.RETRIEVAL_WEIGHTS
         logger.info(f"Building Ensemble Retriever. Weights: {weights}")
         
-        dense = vector_store.as_retriever(
+        dense = vector_store.as_langchain_retriever(
             search_type="similarity",
             search_kwargs={"k": settings.RAG_TOP_K}
         )
-        mmr = vector_store.as_retriever(
+        mmr = vector_store.as_langchain_retriever(
             search_type="mmr",
             search_kwargs={
                 "k": settings.RAG_TOP_K,
@@ -77,7 +77,7 @@ class RetrievalFactory:
     """
     """
     @staticmethod
-    def get_retriever(vector_store: Any, settings: Config = global_config) -> BaseRetriever:
+    def get_retriever(vector_store: VectorStoreManager, settings: Config = global_config) -> BaseRetriever:
         strategy_name = settings.RETRIEVAL_STRATEGY.lower()
         
         strategy_cls = _RETRIEVAL_REGISTRY.get(strategy_name)

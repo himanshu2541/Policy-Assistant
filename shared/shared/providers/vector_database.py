@@ -35,6 +35,9 @@ class PineconeAdapter(VectorStoreManager):
         except Exception as e:
             logger.error(f"Pinecone delete failed for {doc_id}: {e}")
             return False
+    
+    def as_langchain_retriever(self, search_type: str, search_kwargs: dict):
+        return self.store.as_retriever(search_type=search_type, search_kwargs=search_kwargs)
 
 class FAISSAdapter(VectorStoreManager):
     def __init__(self, store: FAISS):
@@ -52,6 +55,9 @@ class FAISSAdapter(VectorStoreManager):
         # we strictly return False to indicate "Not Supported/Failed" cleanly.
         logger.warning(f"Delete operation not supported/implemented for FAISS Local adapter (doc_id: {doc_id})")
         return False
+    
+    def as_langchain_retriever(self, search_type: str, search_kwargs: dict):
+        return self.store.as_retriever(search_type=search_type, search_kwargs=search_kwargs)
     
 @register_vector_db_strategy("pinecone")
 class PineconeStrategy(VectorDBStrategy):

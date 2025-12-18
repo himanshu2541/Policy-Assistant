@@ -35,7 +35,7 @@ async def main():
 
     try:
         while True:
-            result = redis_client.brpop(["rag_jobs"], timeout=1)
+            result = await redis_client.brpop(["rag_jobs"], timeout=1) # type: ignore
             if result:
                 _, job_data_str = result  # type: ignore
                 job = json.loads(job_data_str)
