@@ -1,9 +1,13 @@
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, WebSocket
 from api_gateway.app.models.chat import ChatRequest, ChatResponse
 from api_gateway.app.models.document import DocumentContext
+from starlette.websockets import WebSocketDisconnect
 
 from api_gateway.core.dependencies import get_chat_client
 from api_gateway.services.chat_client import ChatServiceClient
+
+from shared.protos import service_pb2
 
 import logging
 logger = logging.getLogger("API-Gateway.Routes.Chat")
@@ -51,8 +55,8 @@ async def websocket_endpoint(
     Frontend sends: Binary Audio Chunks -> Then "END" string.
     Backend sends: JSON events {"text": "...", "event": "..."}
     """
+    logger.info("WebSocket connection established for audio chat.")
     await websocket.accept()
-
     # 1. Define Producer (WebSocket -> gRPC)
     async def request_generator():
         try:
@@ -61,13 +65,20 @@ async def websocket_endpoint(
                 if "bytes" in message:
                     yield service_pb2.AudioChunk(content=message["bytes"], session_id="default")  # type: ignore
                 elif "text" in message and message["text"] == "END":
+                    logger.info("Received END signal from client.")
                     break
-        except Exception:
-            pass  # Handle disconnects gracefully
+        except WebSocketDisconnect:
+            logger.info("WebSocket disconnected")
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.error(f"request_generator error: {e}")
 
     # 2. Consume & Forward (gRPC -> WebSocket)
     try:
+        logger.info("Starting to stream audio chat responses...")
         async for response in chat_client.stream_audio_chat(request_generator()):
+            logger.info(f"Sending event: {response.event_type}")
             contexts_data = [
                 {"text": c.text, "doc_id": c.doc_id, "score": c.score}
                 for c in response.context_chunks
@@ -87,5 +98,3 @@ async def websocket_endpoint(
             )
         except:
             pass
-    finally:
-        logger.info("WebSocket connection closed")

@@ -54,29 +54,34 @@ async def admin_notifications(websocket: WebSocket):
     dedicated WebSocket endpoint for admin panel push notifications.
     """
     await websocket.accept()
+    logger.info("Admin connected to notifications WebSocket.")
 
     redis = await get_redis_pubsub()
-    pubsub = redis.pubsub()
-    await pubsub.subscribe("job_updates")
-
-    pubsub = redis.pubsub()
-    await pubsub.subscribe("job_updates")  # Channel name must match the Worker
-
     try:
-        while True:
-            # Wait for messages from Redis (sent by the Worker)
-            message = await pubsub.get_message(ignore_subscribe_messages=True)
+        async with redis.pubsub() as pubsub:
+            await pubsub.subscribe("job_updates")
+            
+            while True:
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
 
-            if message:
-                await websocket.send_text(message["data"])
-
-            # Tiny sleep to prevent CPU hogging
-            await asyncio.sleep(0.1)
+                if message:
+                    data = message["data"]
+                    if isinstance(data, bytes):
+                        data = data.decode('utf-8')
+                    await websocket.send_text(data)
+                
+                # Keep connection alive
+                await asyncio.sleep(0.1)
 
     except WebSocketDisconnect:
-        await pubsub.unsubscribe("job_updates")
-        logger.info("Admin disconnected")
-
+        logger.info("Client disconnected normally.")
+    except Exception as e:
+        logger.error(f"Socket Error: {e}")
+    finally:
+        try:
+            await websocket.close()
+        except:
+            pass
 
 @router.delete(
     "/vectors", response_model=DeleteVectorResponse, tags=["Vectors"]

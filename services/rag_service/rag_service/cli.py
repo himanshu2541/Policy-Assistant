@@ -1,6 +1,7 @@
 import sys
 from shared.config import config
 import logging
+import asyncio
 
 logger = logging.getLogger("RAG-Service-CLI")
 

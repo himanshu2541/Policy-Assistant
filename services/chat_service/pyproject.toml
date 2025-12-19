@@ -10,7 +10,9 @@ requires-python = ">=3.10"
 dependencies = [
     "faster-whisper>=1.2.1",
     "grpcio>=1.76.0",
+    "imageio-ffmpeg>=0.6.0",
     "protobuf>=6.33.1",
+    "speechrecognition>=3.14.4",
 ]
 
 

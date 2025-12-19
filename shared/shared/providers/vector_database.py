@@ -63,11 +63,12 @@ class FAISSAdapter(VectorStoreManager):
 class PineconeStrategy(VectorDBStrategy):
     def create_vector_store(self, embeddings: Any, settings: Config) -> Any:
         logger.info(f"Creating Pinecone vector store with index: {settings.PINECONE_INDEX_NAME}") #
-        return PineconeVectorStore(
+        store = PineconeVectorStore(
             index_name=settings.PINECONE_INDEX_NAME,
             embedding=embeddings,
             pinecone_api_key=settings.PINECONE_API_KEY
         )
+        return PineconeAdapter(store)
 
 @register_vector_db_strategy("local")
 class FAISSStrategy(VectorDBStrategy):
@@ -76,14 +77,14 @@ class FAISSStrategy(VectorDBStrategy):
         index_path = "faiss_index"
         
         if os.path.exists(index_path):
-            return FAISS.load_local(
+            store = FAISS.load_local(
                 index_path, 
                 embeddings, 
                 allow_dangerous_deserialization=True
             )
-        
-        # Fallback/Init logic
-        return FAISS.from_texts(["initial_setup"], embeddings)
+        else:
+            store = FAISS.from_texts(["initial_setup"], embeddings)
+        return FAISSAdapter(store)
 
 class VectorDBFactory:
     @staticmethod

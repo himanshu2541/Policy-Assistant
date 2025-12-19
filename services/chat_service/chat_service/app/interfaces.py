@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from shared.config import Config
-from typing import Dict, List, Tuple, Any, Generator
+from typing import Dict, List, Tuple, Any, Generator, Iterator
 
 from shared.protos import service_pb2
 
@@ -43,5 +43,17 @@ class PipelineStep(ABC):
         Executes the step logic.
         :param context: A shared dictionary to pass data (like retrieved chunks) between steps.
         :yields: ChatStreamResponse events (thinking, context, answer, etc.)
+        """
+        pass
+
+class AudioStreamConverter(ABC):
+    """
+    Interface for converting audio (e.g., WebM -> WAV).
+    """
+    @abstractmethod
+    def convert_bytes(self, data: bytes) -> bytes:
+        """
+        Converts a full binary buffer (e.g., WebM) into WAV format.
+        Useful for batch processing.
         """
         pass

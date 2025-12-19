@@ -5,6 +5,7 @@ from chat_service.app.core.pipeline import FlexiblePipeline
 from shared.config import setup_logging, config, Config
 from shared.protos import service_pb2, service_pb2_grpc
 
+from chat_service.app.adapters.audio_converter import FFmpegAudioConverter
 from chat_service.app.core.transcriber import TranscriptionService
 from chat_service.app.providers.pipeline import PipelineFactory
 
@@ -15,7 +16,10 @@ logger = logging.getLogger("Chat-Service.Main")
 class ChatService(service_pb2_grpc.ChatServiceServicer):
     def __init__(self, pipeline: FlexiblePipeline, settings: Config):
         self.config = settings
-        self.transcriber = TranscriptionService(settings=self.config)
+        converter = FFmpegAudioConverter()
+        self.transcriber = TranscriptionService(
+            converter=converter, settings=self.config
+        )
         self.pipeline = pipeline
 
     def Interact(self, request, context):
@@ -70,7 +74,9 @@ class ChatService(service_pb2_grpc.ChatServiceServicer):
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     pipeline = PipelineFactory.create(config)
-    service_pb2_grpc.add_ChatServiceServicer_to_server(ChatService(pipeline, settings=config), server)
+    service_pb2_grpc.add_ChatServiceServicer_to_server(
+        ChatService(pipeline, settings=config), server
+    )
 
     port = config.CHAT_SERVICE_PORT
     server.add_insecure_port(f"[::]:{port}")

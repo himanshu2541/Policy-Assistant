@@ -24,7 +24,7 @@ class RAGService(service_pb2_grpc.RAGServiceServicer):
         # Search Engine for Retrieval
         self.search_engine = SearchEngine(vector_store_adapter, self.config)
 
-    def RetrieveContext(self, request, context):
+    async def RetrieveContext(self, request, context):
         try:
             results = self.search_engine.search(
                 query=request.query_text, top_k=request.top_k or 5
@@ -49,12 +49,12 @@ class RAGService(service_pb2_grpc.RAGServiceServicer):
             logger.error(f"Search Error: {e}")
             return service_pb2.SearchResponse()  # type: ignore
 
-    def TriggerSync(self, request, context):
+    async def TriggerSync(self, request, context):
         job_payload = json.dumps(
             {"doc_id": request.doc_id, "file_path": request.file_path}
         )
         try:
-            self.redis.lpush("rag_jobs", job_payload)
+            await self.redis.lpush("rag_jobs", job_payload) # type: ignore
             job_id = f"job_{int(time.time())}"
             logger.info(
                 f"Queued RAG job for doc_id: {request.doc_id}, job_id: {job_id}"
@@ -64,10 +64,10 @@ class RAGService(service_pb2_grpc.RAGServiceServicer):
             logger.error(f"Redis Error: {e}")
             return service_pb2.SyncResponse(status="Failed")  # type: ignore
 
-    def ListDocuments(self, request, context):
+    async def ListDocuments(self, request, context):
         """Fetch all documents from Redis metadata store."""
         try:
-            raw_data = self.redis.hgetall("rag_documents")
+            raw_data = await self.redis.hgetall("rag_documents") # type: ignore
 
             docs = []
             for doc_id, json_str in raw_data.items():  # type: ignore
@@ -86,13 +86,13 @@ class RAGService(service_pb2_grpc.RAGServiceServicer):
             logger.error(f"List Docs Error: {e}")
             return service_pb2.ListDocsResponse()  # type: ignore
 
-    def DeleteVectors(self, request, context):
+    async def DeleteVectors(self, request, context):
         try:
             success = self.search_engine.delete_vector(request.doc_id)
 
             if success:
                 logger.info(f"Vectors deleted for doc_id: {request.doc_id}")
-                self.redis.hdel("rag_documents", request.doc_id)
+                await self.redis.hdel("rag_documents", request.doc_id) # type: ignore
             logger.info(
                 f"Deleted vectors for doc_id: {request.doc_id}, success: {success}"
             )
