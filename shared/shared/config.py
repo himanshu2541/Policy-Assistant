@@ -4,6 +4,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 class Config(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+    
     OPENAI_API_KEY: str = ""
 
     ENV: str = "development"
@@ -35,13 +41,17 @@ class Config(BaseSettings):
 
     # Options: "openai" or "local" (for LM Studio/Ollama)
     LLM_PROVIDER: str = "local"
-    LLM_MODEL: str = "phi-3-mini-4k-instruct"
+    LLM_MODEL: str = "mistral-7b-instruct-v0.3"
     LLM_BASE_URL: str = "http://localhost:1234/v1"
-    LLM_TEMPERATURE: float = 0.8
+    LLM_TEMPERATURE: float = 0.0
 
     VECTOR_DB_PROVIDER: str = "pinecone"
     PINECONE_API_KEY: str = ""
     PINECONE_INDEX_NAME: str = ""
+
+    NEO4J_URI: str = "bolt://localhost:7687"
+    NEO4J_USERNAME: str = "neo4j"
+    NEO4J_PASSWORD: str = "password"
 
     STT_PROVIDER: str = "local"  # "local" or "openai"
     STT_MODEL_SIZE: str = "small"
@@ -50,14 +60,8 @@ class Config(BaseSettings):
 
     RELOAD: bool = True if ENV == "development" else False
     UPLOAD_DIR: str = "./data/uploads"
-    CHUNK_SIZE: int = 500
-    CHUNK_OVERLAP: int = 50
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
+    CHUNK_SIZE: int = 1000
+    CHUNK_OVERLAP: int = 200
 
 
 def setup_logging():

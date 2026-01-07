@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "chat_service"
@@ -19,9 +19,5 @@ dependencies = [
 [project.scripts]
 chat-service = "chat_service.cli:run"
   
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["chat_service", "chat_service.*"]
-
-[tool.uv.sources]
-shared = { workspace = true }
+[tool.hatch.build.targets.wheel]
+packages = ["chat_service"]

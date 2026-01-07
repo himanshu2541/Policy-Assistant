@@ -1,6 +1,7 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 
 [project]
 name = "llm_service"
@@ -16,8 +17,5 @@ dependencies = [
 [project.scripts]
 llm-service = "llm_service.cli:run"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["llm_service", "llm_service.*"]
-[tool.uv.sources]
-shared = { workspace = true }
+[tool.hatch.build.targets.wheel]
+packages = ["llm_service"]

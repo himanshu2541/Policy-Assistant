@@ -8,9 +8,9 @@ from shared.config import config, setup_logging
 from shared.providers.embeddings import EmbeddingFactory
 from shared.providers.vector_database import VectorDBFactory
 from shared.providers.redis import RedisFactory
+from shared.providers.llm import LLMFactory
 
 from rag_worker.providers.processors import ProcessorFactory
-
 from rag_worker.services.ingestion import IngestionService
 from rag_worker.services.reporting import RedisJobStatusReporter
 
@@ -27,9 +27,11 @@ async def main():
     embeddings = EmbeddingFactory.get_embeddings(config)
     vector_store = VectorDBFactory.get_vector_store(embeddings, config)
 
+    llm = LLMFactory.get_llm(config)
+
     # Initialize Ingestion Service
     status_reporter = RedisJobStatusReporter(redis_client)
-    ingestion_service = IngestionService(vector_store, status_reporter)
+    ingestion_service = IngestionService(vector_store, status_reporter, llm)
 
     logger.info("Waiting for jobs...")
 
